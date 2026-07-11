@@ -1,0 +1,6 @@
+{
+  "name": "SmartWard AI",
+  "description": "SmartWard AI is an AI-powered Civic Governance Platform helping citizens report issues while enabling authorities to prioritize and manage public grievances.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

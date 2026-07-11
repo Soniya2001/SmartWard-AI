@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-gov-blue: #2563EB;
+  --color-gov-blue-dark: #1D4ED8;
+  --color-gov-blue-light: #EFF6FF;
+  
+  --color-ai-purple: #7C3AED;
+  --color-ai-purple-dark: #6D28D9;
+  --color-ai-purple-light: #F5F3FF;
+  
+  --color-success: #10B981;
+  --color-success-light: #ECFDF5;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FEF3C7;
+  --color-danger: #EF4444;
+  --color-danger-light: #FEF2F2;
+  
+  --color-brand-bg: #F8FAFC;
+}
+
+body {
+  background-color: var(--color-brand-bg);
+  color: #1E293B;
+  font-family: var(--font-sans);
+}
+
+/* Material Design 3 soft shadow definitions */
+.md3-shadow-sm {
+  box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.05), 0px 1px 2px 0px rgba(0, 0, 0, 0.03);
+}
+
+.md3-shadow-md {
+  box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.05), 0px 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.md3-shadow-lg {
+  box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.04), 0px 4px 6px -2px rgba(0, 0, 0, 0.02);
+}
+
+/* Custom scrollbar matching Google Console style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
