@@ -6,6 +6,51 @@ import {
 } from 'lucide-react';
 import { AuthorityMember } from './types';
 
+// Helper to extract clean name initials
+export const getInitials = (name: string) => {
+  let cleaned = name.replace(/^(Thiru\.|Smt\.|Dr\.|Shri\.|Er\.|Thirumathi\.|Selvi\.|Thiru|Smt|Dr|Shri|Er)\s+/i, '').trim();
+  cleaned = cleaned.replace(/^[A-Z]\.?(\s|[A-Z]\.?\s)*/i, '').trim();
+  if (!cleaned) {
+    cleaned = name;
+  }
+  return cleaned.charAt(0).toUpperCase();
+};
+
+export const AuthorityAvatar: React.FC<{ member: AuthorityMember; className?: string }> = ({ member, className = "w-12 h-12 text-lg" }) => {
+  const initial = getInitials(member.name);
+  
+  let colorClasses = "from-slate-600 to-slate-700";
+  switch (member.category) {
+    case 'cm':
+      colorClasses = "from-indigo-600 to-indigo-700 shadow-indigo-100";
+      break;
+    case 'minister':
+      colorClasses = "from-blue-600 to-blue-700 shadow-blue-100";
+      break;
+    case 'collector':
+      colorClasses = "from-emerald-600 to-emerald-700 shadow-emerald-100";
+      break;
+    case 'commissioner':
+      colorClasses = "from-purple-600 to-purple-700 shadow-purple-100";
+      break;
+    case 'mla':
+      colorClasses = "from-amber-500 to-amber-600 shadow-amber-100";
+      break;
+    case 'councillor':
+      colorClasses = "from-teal-600 to-teal-700 shadow-teal-100";
+      break;
+    case 'dept_head':
+      colorClasses = "from-rose-500 to-rose-600 shadow-rose-100";
+      break;
+  }
+  
+  return (
+    <div className={`rounded-full bg-gradient-to-br ${colorClasses} text-white flex items-center justify-center font-display font-bold shadow-sm select-none shrink-0 ${className}`}>
+      {initial}
+    </div>
+  );
+};
+
 // Helper to get department icons safely
 const getDeptIcon = (name?: string) => {
   switch (name) {
@@ -33,11 +78,9 @@ export const CMHeroCard: React.FC<CardProps> = ({ member, onViewProfile }) => {
   return (
     <div className="bg-gradient-to-r from-slate-50 to-white rounded-2xl border border-slate-200 p-6 md3-shadow-md hover:border-gov-blue/40 transition-all group" id={`cm-hero-card-${member.id}`}>
       <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-        <img
-          src={member.photo}
-          alt={member.name}
-          referrerPolicy="no-referrer"
-          className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-slate-100 shadow-md object-cover bg-slate-200"
+        <AuthorityAvatar
+          member={member}
+          className="w-24 h-24 sm:w-28 sm:h-28 text-4xl sm:text-5xl border-4 border-slate-100 shadow-md"
         />
         <div className="flex-1 text-center md:text-left flex flex-col justify-between h-full">
           <div>
@@ -84,11 +127,9 @@ export const MinisterCard: React.FC<CardProps> = ({ member, onViewProfile }) => 
     <div className="bg-white rounded-2xl border border-slate-200 p-5 md3-shadow-sm hover:md3-shadow-md hover:border-slate-300 transition-all flex flex-col justify-between group" id={`minister-card-${member.id}`}>
       <div>
         <div className="flex items-start gap-4 mb-4">
-          <img
-            src={member.photo}
-            alt={member.name}
-            referrerPolicy="no-referrer"
-            className="w-14 h-14 rounded-full border border-slate-100 object-cover bg-slate-100"
+          <AuthorityAvatar
+            member={member}
+            className="w-14 h-14 text-xl border border-slate-100 shadow-sm"
           />
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
@@ -131,11 +172,9 @@ export const ExecutiveFeatureCard: React.FC<CardProps> = ({ member, onViewProfil
       <div>
         {/* Header Profile details */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-b border-slate-100 pb-4 mb-4">
-          <img
-            src={member.photo}
-            alt={member.name}
-            referrerPolicy="no-referrer"
-            className="w-16 h-16 rounded-full border-2 border-slate-100 object-cover bg-slate-100"
+          <AuthorityAvatar
+            member={member}
+            className="w-16 h-16 text-2xl border-2 border-slate-100 shadow-sm"
           />
           <div className="text-left">
             <span className="text-[10px] font-bold text-ai-purple bg-ai-purple-light px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -229,11 +268,9 @@ export const MLACard: React.FC<CardProps> = ({ member, onViewProfile }) => {
         </div>
 
         <div className="flex items-center gap-3.5 my-4">
-          <img
-            src={member.photo}
-            alt={member.name}
-            referrerPolicy="no-referrer"
-            className="w-13 h-13 rounded-full border border-slate-100 object-cover bg-slate-50"
+          <AuthorityAvatar
+            member={member}
+            className="w-13 h-13 text-lg border border-slate-100 shadow-sm"
           />
           <div>
             <h4 className="font-display font-bold text-slate-900 text-sm leading-tight group-hover:text-gov-blue transition-colors">
@@ -283,11 +320,9 @@ export const CouncillorCard: React.FC<CardProps> = ({ member, onViewProfile }) =
         </div>
 
         <div className="flex items-center gap-3 mb-4">
-          <img
-            src={member.photo}
-            alt={member.name}
-            referrerPolicy="no-referrer"
-            className="w-11 h-11 rounded-full border border-slate-100 object-cover bg-slate-50"
+          <AuthorityAvatar
+            member={member}
+            className="w-11 h-11 text-base border border-slate-100 shadow-sm"
           />
           <div>
             <h4 className="font-display font-semibold text-slate-900 text-sm leading-tight group-hover:text-gov-blue transition-colors">
@@ -336,11 +371,9 @@ export const DepartmentHeadCard: React.FC<CardProps> = ({ member, onViewProfile 
         </div>
 
         <div className="flex items-center gap-3 mb-4">
-          <img
-            src={member.photo}
-            alt={member.name}
-            referrerPolicy="no-referrer"
-            className="w-11 h-11 rounded-full border border-slate-100 object-cover bg-slate-50"
+          <AuthorityAvatar
+            member={member}
+            className="w-11 h-11 text-base border border-slate-100 shadow-sm"
           />
           <div>
             <h4 className="font-display font-semibold text-slate-900 text-sm leading-tight group-hover:text-gov-blue transition-colors">

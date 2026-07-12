@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Mail, Phone, MapPin, Clock, Award, Star, CheckCircle2, TrendingUp } from 'lucide-react';
 import { AuthorityMember } from './types';
+import { AuthorityAvatar } from './DirectoryGrids';
 
 interface ProfileModalProps {
   member: AuthorityMember | null;
@@ -36,11 +37,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ member, onClose }) =
 
         {/* Profile Header */}
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 border-b border-slate-100">
-          <img
-            src={member.photo}
-            alt={member.name}
-            referrerPolicy="no-referrer"
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-slate-50 object-cover shadow-md bg-slate-100"
+          <AuthorityAvatar
+            member={member}
+            className="w-24 h-24 sm:w-28 sm:h-28 text-4xl sm:text-5xl border-4 border-slate-50 shadow-md"
           />
           <div className="flex-1 text-center sm:text-left">
             <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2 mb-1.5">

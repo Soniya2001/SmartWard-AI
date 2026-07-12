@@ -25,12 +25,12 @@ interface AuthorityContextType {
 }
 
 const rolesList: GovernmentRole[] = [
-  { id: 'cm', roleName: 'Chief Minister', name: 'Thiru. C. Joseph Vijay', email: 'cm@smartward.in', department: 'State Executive Council', jurisdiction: 'State of Tamil Nadu', badge: 'Apex Command', avatarSeed: 'CM', avatarColor: 'bg-indigo-600' },
-  { id: 'minister', roleName: 'Minister', name: 'Thiru. Bussy N. Anand', email: 'minister.municipal@smartward.in', department: 'Urban Development & Municipal Administration', jurisdiction: 'State-wide Infrastructure', badge: 'Cabinet Minister', avatarSeed: 'MIN', avatarColor: 'bg-blue-600' },
-  { id: 'collector', roleName: 'District Collector', name: 'Dr. M.S. Sangeetha, IAS', email: 'collector.madurai@smartward.in', department: 'District Revenue & Public Safety', jurisdiction: 'Madurai District', badge: 'District Magistrate', avatarSeed: 'COL', avatarColor: 'bg-emerald-600' },
-  { id: 'commissioner', roleName: 'Municipal Commissioner', name: 'Shri. L. Madhubalan, IAS', email: 'commissioner.madurai@smartward.in', department: 'Madurai Municipal Corporation Secretariat', jurisdiction: 'Madurai City Limit', badge: 'Corporation Head', avatarSeed: 'COM', avatarColor: 'bg-purple-600' },
-  { id: 'mla', roleName: 'MLA', name: 'Shri. G. Thalapathi', email: 'mla.madurainorth@smartward.in', department: 'State Legislative Assembly constituency', jurisdiction: 'Madurai North Constituency', badge: 'State Representative', avatarSeed: 'MLA', avatarColor: 'bg-amber-600' },
-  { id: 'councillor', roleName: 'Ward Councillor', name: 'Smt. S. Kavitha', email: 'councillor.ward42@smartward.in', department: 'Ward 42 Standing Committee', jurisdiction: 'Ward 42 (Madurai)', badge: 'Ward Representative', avatarSeed: 'WC', avatarColor: 'bg-teal-600' },
+  { id: 'cm', roleName: 'Chief Minister', name: 'Thiru. S. K. Sundaram', email: 'cm@smartward.in', department: 'State Executive Council', jurisdiction: 'State of Tamil Nadu', badge: 'Apex Command', avatarSeed: 'CM', avatarColor: 'bg-indigo-600' },
+  { id: 'minister', roleName: 'Minister', name: 'Thiru. A. K. Raghavan', email: 'minister.municipal@smartward.in', department: 'Urban Development & Municipal Administration', jurisdiction: 'State-wide Infrastructure', badge: 'Cabinet Minister', avatarSeed: 'MIN', avatarColor: 'bg-blue-600' },
+  { id: 'collector', roleName: 'District Collector', name: 'Dr. S. Priya, IAS', email: 'collector.madurai@smartward.in', department: 'District Revenue & Public Safety', jurisdiction: 'Madurai District', badge: 'District Magistrate', avatarSeed: 'COL', avatarColor: 'bg-emerald-600' },
+  { id: 'commissioner', roleName: 'Municipal Commissioner', name: 'Shri. R. Saravanakumar, IAS', email: 'commissioner.madurai@smartward.in', department: 'Madurai Municipal Corporation Secretariat', jurisdiction: 'Madurai City Limit', badge: 'Corporation Head', avatarSeed: 'COM', avatarColor: 'bg-purple-600' },
+  { id: 'mla', roleName: 'MLA', name: 'Shri. K. Chandrasekar', email: 'mla.madurainorth@smartward.in', department: 'State Legislative Assembly constituency', jurisdiction: 'Madurai North Constituency', badge: 'State Representative', avatarSeed: 'MLA', avatarColor: 'bg-amber-600' },
+  { id: 'councillor', roleName: 'Ward Councillor', name: 'Smt. V. Geetha', email: 'councillor.ward42@smartward.in', department: 'Ward 42 Standing Committee', jurisdiction: 'Ward 42 (Madurai)', badge: 'Ward Representative', avatarSeed: 'WC', avatarColor: 'bg-teal-600' },
   { id: 'officer', roleName: 'Department Officer', name: 'Er. Rajesh Kumar', email: 'roads.ward42@smartward.in', department: 'PWD Highway & Infrastructure Division', jurisdiction: 'Ward 42 Engineering Sector', badge: 'Executive Engineer', avatarSeed: 'DO', avatarColor: 'bg-pink-600' },
 ];
 

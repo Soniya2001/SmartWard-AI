@@ -455,7 +455,7 @@ export const MlaDashboard: React.FC<MlaDashboardProps> = ({ kpis, onActionTrigge
                 { number: 'Ward 39', councillor: 'Smt. P. Meenakshi', complaints: 110, resolution: '88%', satisfaction: '4.1 / 5', color: 'text-emerald-600', bg: 'bg-emerald-50' },
                 { number: 'Ward 40', councillor: 'Thiru. R. Alagarsamy', complaints: 95, resolution: '91%', satisfaction: '4.2 / 5', color: 'text-emerald-600', bg: 'bg-emerald-50' },
                 { number: 'Ward 41', councillor: 'Smt. K. Rajeshwari', complaints: 140, resolution: '81%', satisfaction: '3.8 / 5', color: 'text-red-600', bg: 'bg-red-50' },
-                { number: 'Ward 42', councillor: 'Smt. S. Kavitha', complaints: 64, resolution: '96%', satisfaction: '4.6 / 5', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                { number: 'Ward 42', councillor: 'Smt. V. Geetha', complaints: 64, resolution: '96%', satisfaction: '4.6 / 5', color: 'text-emerald-600', bg: 'bg-emerald-50' },
                 { number: 'Ward 43', councillor: 'Thiru. V. Ganesan', complaints: 125, resolution: '86%', satisfaction: '4.0 / 5', color: 'text-emerald-600', bg: 'bg-emerald-50' },
                 { number: 'Ward 44', councillor: 'Smt. M. Chitra', complaints: 75, resolution: '94%', satisfaction: '4.5 / 5', color: 'text-emerald-600', bg: 'bg-emerald-50' }
               ].map((wd) => {

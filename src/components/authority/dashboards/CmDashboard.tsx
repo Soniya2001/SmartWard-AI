@@ -339,7 +339,7 @@ export const CmDashboard: React.FC<CmDashboardProps> = ({ kpis, onActionTrigger,
                     <label className="text-[10px] font-bold text-slate-400 uppercase font-mono tracking-wider">Cabinet Board Attendees</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { name: "Thiru. C. Joseph Vijay", desc: "Chief Minister (Chair)", status: "Active" },
+                        { name: "Thiru. S. K. Sundaram", desc: "Chief Minister (Chair)", status: "Active" },
                         { name: "Thiru. K. Paneerselvam", desc: "Minister of Water Supply", status: "Connected" },
                         { name: "Tmt. S. Aruna, IAS", desc: "Finance Secretary", status: "Connected" },
                         { name: "Er. Rajesh Kumar", desc: "PWD Chief Engineer", status: "Connected" }
@@ -785,7 +785,7 @@ export const CmDashboard: React.FC<CmDashboardProps> = ({ kpis, onActionTrigger,
                   <label className="text-[10px] font-bold text-slate-400 uppercase font-mono tracking-wider">Cabinet Board Attendees</label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { name: "Thiru. C. Joseph Vijay", desc: "Chief Minister (Chair)", status: "Active" },
+                      { name: "Thiru. S. K. Sundaram", desc: "Chief Minister (Chair)", status: "Active" },
                       { name: "Thiru. K. Paneerselvam", desc: "Minister of Water Supply", status: "Connected" },
                       { name: "Tmt. S. Aruna, IAS", desc: "Finance Secretary", status: "Connected" },
                       { name: "Er. Rajesh Kumar", desc: "PWD Chief Engineer", status: "Connected" }
