@@ -45,9 +45,6 @@ export const Footer: React.FC = () => {
               <li>
                 <Link to="/authorities" className="hover:text-gov-blue transition-colors">Authorities Index</Link>
               </li>
-              <li>
-                <Link to="/about" className="hover:text-gov-blue transition-colors">About & Architecture</Link>
-              </li>
             </ul>
           </div>
 
@@ -65,7 +62,7 @@ export const Footer: React.FC = () => {
                 <a href="#contact" className="hover:text-gov-blue transition-colors">Support Contact</a>
               </li>
               <li>
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-gov-blue transition-colors inline-flex items-center gap-1.5">
+                <a href="https://github.com/Soniya2001/SmartWard-AI" target="_blank" rel="noopener noreferrer" className="hover:text-gov-blue transition-colors inline-flex items-center gap-1.5">
                   <Github className="h-4 w-4" /> GitHub Project
                 </a>
               </li>

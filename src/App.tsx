@@ -12,7 +12,6 @@ import { CitizenSignup } from './pages/CitizenSignup';
 import { CitizenDashboard } from './pages/CitizenDashboard';
 import { AuthorityLogin } from './pages/AuthorityLogin';
 import { PublicDashboard } from './pages/PublicDashboard';
-import { AboutPage } from './pages/AboutPage';
 import { AuthoritiesPage } from './pages/AuthoritiesPage';
 
 // Authority pages
@@ -111,7 +110,6 @@ const AnimatedRoutes: React.FC = () => {
           <Route path="/login/authority" element={<PublicLayout><AuthorityLogin /></PublicLayout>} />
           <Route path="/authority/login" element={<PublicLayout><AuthorityLogin /></PublicLayout>} />
           <Route path="/public-dashboard" element={<PublicLayout><PublicDashboard /></PublicLayout>} />
-          <Route path="/about" element={<PublicLayout><AboutPage /></PublicLayout>} />
           <Route path="/authorities" element={<PublicLayout><AuthoritiesPage /></PublicLayout>} />
 
           {/* Secure Authority Console Routes */}

@@ -24,8 +24,7 @@ export const Navbar: React.FC = () => {
 
   navLinks.push(
     { name: 'Public Dashboard', path: '/public-dashboard', icon: PieChart },
-    { name: 'Authorities', path: '/authorities', icon: Users },
-    { name: 'About', path: '/about', icon: Info }
+    { name: 'Authorities', path: '/authorities', icon: Users }
   );
 
   if (user) {

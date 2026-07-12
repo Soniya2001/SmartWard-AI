@@ -24,22 +24,21 @@ interface AuthorityContextType {
   setSelectedDepartment: (dept: string) => void;
 }
 
+const rolesList: GovernmentRole[] = [
+  { id: 'cm', roleName: 'Chief Minister', name: 'Thiru. C. Joseph Vijay', email: 'cm@smartward.in', department: 'State Executive Council', jurisdiction: 'State of Tamil Nadu', badge: 'Apex Command', avatarSeed: 'CM', avatarColor: 'bg-indigo-600' },
+  { id: 'minister', roleName: 'Minister', name: 'Thiru. Bussy N. Anand', email: 'minister.municipal@smartward.in', department: 'Urban Development & Municipal Administration', jurisdiction: 'State-wide Infrastructure', badge: 'Cabinet Minister', avatarSeed: 'MIN', avatarColor: 'bg-blue-600' },
+  { id: 'collector', roleName: 'District Collector', name: 'Dr. M.S. Sangeetha, IAS', email: 'collector.madurai@smartward.in', department: 'District Revenue & Public Safety', jurisdiction: 'Madurai District', badge: 'District Magistrate', avatarSeed: 'COL', avatarColor: 'bg-emerald-600' },
+  { id: 'commissioner', roleName: 'Municipal Commissioner', name: 'Shri. L. Madhubalan, IAS', email: 'commissioner.madurai@smartward.in', department: 'Madurai Municipal Corporation Secretariat', jurisdiction: 'Madurai City Limit', badge: 'Corporation Head', avatarSeed: 'COM', avatarColor: 'bg-purple-600' },
+  { id: 'mla', roleName: 'MLA', name: 'Shri. G. Thalapathi', email: 'mla.madurainorth@smartward.in', department: 'State Legislative Assembly constituency', jurisdiction: 'Madurai North Constituency', badge: 'State Representative', avatarSeed: 'MLA', avatarColor: 'bg-amber-600' },
+  { id: 'councillor', roleName: 'Ward Councillor', name: 'Smt. S. Kavitha', email: 'councillor.ward42@smartward.in', department: 'Ward 42 Standing Committee', jurisdiction: 'Ward 42 (Madurai)', badge: 'Ward Representative', avatarSeed: 'WC', avatarColor: 'bg-teal-600' },
+  { id: 'officer', roleName: 'Department Officer', name: 'Er. Rajesh Kumar', email: 'roads.ward42@smartward.in', department: 'PWD Highway & Infrastructure Division', jurisdiction: 'Ward 42 Engineering Sector', badge: 'Executive Engineer', avatarSeed: 'DO', avatarColor: 'bg-pink-600' },
+];
+
 const AuthorityContext = createContext<AuthorityContextType | undefined>(undefined);
 
 export const AuthorityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, login } = useAuth();
   const [selectedDepartment, setSelectedDepartment] = useState<string>('Water Supply');
-
-  // Define the 7 roles exactly as requested
-  const rolesList: GovernmentRole[] = [
-    { id: 'cm', roleName: 'Chief Minister', name: 'Thiru. C. Joseph Vijay', email: 'cm@smartward.in', department: 'State Executive Council', jurisdiction: 'State of Tamil Nadu', badge: 'Apex Command', avatarSeed: 'CM', avatarColor: 'bg-indigo-600' },
-    { id: 'minister', roleName: 'Minister', name: 'Thiru. Bussy N. Anand', email: 'minister.municipal@smartward.in', department: 'Urban Development & Municipal Administration', jurisdiction: 'State-wide Infrastructure', badge: 'Cabinet Minister', avatarSeed: 'MIN', avatarColor: 'bg-blue-600' },
-    { id: 'collector', roleName: 'District Collector', name: 'Dr. M.S. Sangeetha, IAS', email: 'collector.madurai@smartward.in', department: 'District Revenue & Public Safety', jurisdiction: 'Madurai District', badge: 'District Magistrate', avatarSeed: 'COL', avatarColor: 'bg-emerald-600' },
-    { id: 'commissioner', roleName: 'Municipal Commissioner', name: 'Shri. L. Madhubalan, IAS', email: 'commissioner.madurai@smartward.in', department: 'Madurai Municipal Corporation Secretariat', jurisdiction: 'Madurai City Limit', badge: 'Corporation Head', avatarSeed: 'COM', avatarColor: 'bg-purple-600' },
-    { id: 'mla', roleName: 'MLA', name: 'Shri. G. Thalapathi', email: 'mla.madurainorth@smartward.in', department: 'State Legislative Assembly constituency', jurisdiction: 'Madurai North Constituency', badge: 'State Representative', avatarSeed: 'MLA', avatarColor: 'bg-amber-600' },
-    { id: 'councillor', roleName: 'Ward Councillor', name: 'Smt. S. Kavitha', email: 'councillor.ward42@smartward.in', department: 'Ward 42 Standing Committee', jurisdiction: 'Ward 42 (Madurai)', badge: 'Ward Representative', avatarSeed: 'WC', avatarColor: 'bg-teal-600' },
-    { id: 'officer', roleName: 'Department Officer', name: 'Er. Rajesh Kumar', email: 'roads.ward42@smartward.in', department: 'PWD Highway & Infrastructure Division', jurisdiction: 'Ward 42 Engineering Sector', badge: 'Executive Engineer', avatarSeed: 'DO', avatarColor: 'bg-pink-600' },
-  ];
 
   const [activeRole, setActiveRole] = useState<GovernmentRole>(rolesList[2]); // Default to District Collector
 
@@ -113,11 +112,11 @@ export const AuthorityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     if (user && user.role === 'authority') {
       const matched = rolesList.find(r => r.email.toLowerCase() === user.email.toLowerCase());
-      if (matched) {
+      if (matched && matched.id !== activeRole.id) {
         setActiveRole(matched);
       }
     }
-  }, [user]);
+  }, [user, activeRole.id]);
 
   // KPI calculations scaled based on active role's jurisdiction scope
   const kpis = useMemo(() => {

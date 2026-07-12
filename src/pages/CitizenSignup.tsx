@@ -842,7 +842,7 @@ export const CitizenSignup: React.FC = () => {
                         className={`h-4.5 w-4.5 rounded text-gov-blue focus:ring-gov-blue/30 mt-0.5 ${errors.terms ? 'border-danger' : 'border-slate-300'}`}
                       />
                       <span className="text-xs text-slate-600 font-semibold leading-normal">
-                        I agree to the <Link to="/about" className="text-gov-blue hover:underline">Terms & Conditions</Link> and <Link to="/about" className="text-gov-blue hover:underline">Privacy Policy</Link> governing official SmartWard AI registries.
+                        I agree to the <Link to="/" className="text-gov-blue hover:underline">Terms & Conditions</Link> and <Link to="/" className="text-gov-blue hover:underline">Privacy Policy</Link> governing official SmartWard AI registries.
                       </span>
                     </label>
                     {errors.terms && (
