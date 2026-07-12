@@ -8,7 +8,7 @@ import {
   Building2, Landmark, DollarSign, Users, Award, FileText, 
   MapPin, CheckCircle2, AlertCircle, RefreshCw, Star, 
   ArrowUpRight, Sparkles, Download, Layers, Calendar,
-  Activity, ShieldAlert, Sliders, Map, Clock
+  Activity, ShieldAlert, Sliders, Map, Clock, Loader2, Check
 } from 'lucide-react';
 import { useAuthority } from '../../../contexts/AuthorityContext';
 
@@ -21,22 +21,53 @@ interface CollectorDashboardProps {
 export const CollectorDashboard: React.FC<CollectorDashboardProps> = ({ kpis, onActionTrigger, activeSubTab }) => {
   const { chartData } = useAuthority();
   // Municipalities comparisons
-  const municipalities = [
-    { name: 'Madurai Corporation', score: 92, status: 'Compliant', tickets: 1245, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { name: 'Usilampatti Municipality', score: 84, status: 'Warning', tickets: 218, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { name: 'Melur Town Panchayat', score: 79, status: 'Lagging', tickets: 184, color: 'text-rose-600', bg: 'bg-rose-50' }
-  ];
+  const [municipalities, setMunicipalities] = React.useState<any[]>(() => {
+    const saved = localStorage.getItem('smartward_collector_municipalities');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { name: 'Madurai Corporation', score: 92, status: 'Compliant', tickets: 1245, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+      { name: 'Usilampatti Municipality', score: 84, status: 'Warning', tickets: 218, color: 'text-amber-600', bg: 'bg-amber-50' },
+      { name: 'Melur Town Panchayat', score: 79, status: 'Lagging', tickets: 184, color: 'text-rose-600', bg: 'bg-rose-50' }
+    ];
+  });
 
   // Critical cross-agency deadlock list
-  const criticalIssues = [
-    { id: 'CRIT-101', title: 'PWD Highway Debris backlog', agency: 'National Highways vs Corporation PWD', impact: 'Melur Road Gridlock', duration: '18 hrs delay', priority: 'Severe' },
-    { id: 'CRIT-104', title: 'Pollution Control Board Clearance', agency: 'TNPCB vs Water Supply Board', impact: 'Vaigai Filter Bed operational halt', duration: '36 hrs delay', priority: 'High' }
-  ];
+  const [criticalIssues, setCriticalIssues] = React.useState<any[]>(() => {
+    const saved = localStorage.getItem('smartward_collector_critical_issues');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { id: 'CRIT-101', title: 'PWD Highway Debris backlog', agency: 'National Highways vs Corporation PWD', impact: 'Melur Road Gridlock', duration: '18 hrs delay', priority: 'Severe' },
+      { id: 'CRIT-104', title: 'Pollution Control Board Clearance', agency: 'TNPCB vs Water Supply Board', impact: 'Vaigai Filter Bed operational halt', duration: '36 hrs delay', priority: 'High' }
+    ];
+  });
+
+  const [reRouteApproved, setReRouteApproved] = React.useState<boolean>(() => {
+    return localStorage.getItem('smartward_collector_reroute_approved') === 'true';
+  });
+  const [isReRouting, setIsReRouting] = React.useState<boolean>(false);
+  const [clearingIssueId, setClearingIssueId] = React.useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = React.useState<string | null>(null);
+
+  // Force Dispatch state
+  const [forceDispatchApproved, setForceDispatchApproved] = React.useState<boolean>(() => {
+    return localStorage.getItem('smartward_collector_force_dispatch_approved') === 'true';
+  });
+  const [isForceDispatching, setIsForceDispatching] = React.useState<boolean>(false);
 
   // Map segments showing collectorate jurisdiction sectors
   const districtSectors = [
     { id: 'sec-a', name: 'Madurai North Taluk', level: 'High', color: 'bg-rose-500', pct: 88 },
-    { id: 'sec-b', name: 'Melur Taluk Block', level: 'High', color: 'bg-rose-500', pct: 79 },
+    { 
+      id: 'sec-b', 
+      name: 'Melur Taluk Block', 
+      level: forceDispatchApproved ? 'Stable' : 'High', 
+      color: forceDispatchApproved ? 'bg-emerald-500' : 'bg-rose-500', 
+      pct: forceDispatchApproved ? 94 : 79 
+    },
     { id: 'sec-c', name: 'Usilampatti Sector', level: 'Moderate', color: 'bg-amber-500', pct: 84 },
     { id: 'sec-d', name: 'Vadipatti Block', level: 'Stable', color: 'bg-emerald-500', pct: 93 },
     { id: 'sec-e', name: 'Thirumangalam Block', level: 'Stable', color: 'bg-emerald-500', pct: 95 }
@@ -62,6 +93,16 @@ export const CollectorDashboard: React.FC<CollectorDashboardProps> = ({ kpis, on
           </div>
         </div>
 
+        {alertMessage && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-bold flex items-center justify-between shadow-sm animate-scale-in">
+            <span className="flex items-center gap-1.5">
+              <Check className="h-4 w-4 text-emerald-650 shrink-0" />
+              {alertMessage}
+            </span>
+            <button onClick={() => setAlertMessage(null)} className="text-emerald-500 hover:text-emerald-700 font-black cursor-pointer px-1">✕</button>
+          </div>
+        )}
+
         {/* AI Intelligence Briefing Panel */}
         <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-5 rounded-2xl border border-emerald-100 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
           <div className="space-y-1 z-10 max-w-2xl">
@@ -73,15 +114,47 @@ export const CollectorDashboard: React.FC<CollectorDashboardProps> = ({ kpis, on
               Melur Block Revenue &amp; Water Conflict
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-              Melur Town Panchayat reports a 19-hour bottleneck in resolving inter-departmental clean water pipelines. <strong className="text-emerald-950 font-bold">Recommended action:</strong> Authorize a District Magistracy Force Dispatch order to override municipal boundaries and resolve the clean water supply bottleneck.
+              {forceDispatchApproved ? (
+                <>
+                  <span className="text-emerald-800 font-bold">Force Dispatch Order Active!</span> Melur Town Panchayat clean water supply pipeline bottleneck has been successfully bypassed and resolved under direct magistrate override.
+                </>
+              ) : (
+                <>
+                  Melur Town Panchayat reports a 19-hour bottleneck in resolving inter-departmental clean water pipelines. <strong className="text-emerald-950 font-bold">Recommended action:</strong> Authorize a District Magistracy Force Dispatch order to override municipal boundaries and resolve the clean water supply bottleneck.
+                </>
+              )}
             </p>
           </div>
-          <button 
-            onClick={() => onActionTrigger("Authorize Force Dispatch")}
-            className="shrink-0 z-10 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm"
-          >
-            Authorize Force Dispatch
-          </button>
+          {forceDispatchApproved ? (
+            <div className="shrink-0 px-4 py-2 bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-sm">
+              <Check className="h-4 w-4 text-emerald-600" /> Force Dispatch Active
+            </div>
+          ) : (
+            <button 
+              onClick={() => {
+                setIsForceDispatching(true);
+                onActionTrigger("Authorize Force Dispatch");
+                setTimeout(() => {
+                  setIsForceDispatching(false);
+                  setForceDispatchApproved(true);
+                  localStorage.setItem('smartward_collector_force_dispatch_approved', 'true');
+                  setAlertMessage("Magistracy Force Dispatch order successfully authorized! Melur clean water supply bottleneck has been bypassed.");
+                  setTimeout(() => setAlertMessage(null), 4000);
+                }, 1500);
+              }}
+              disabled={isForceDispatching}
+              className="shrink-0 z-10 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {isForceDispatching ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                  Dispatching...
+                </>
+              ) : (
+                "Authorize Force Dispatch"
+              )}
+            </button>
+          )}
         </div>
 
         {/* First Row of Charts */}
@@ -237,26 +310,29 @@ export const CollectorDashboard: React.FC<CollectorDashboardProps> = ({ kpis, on
           <div className="flex gap-2">
             <button 
               onClick={() => onActionTrigger("Compare Municipalities")}
-              className="px-4 py-2 bg-white text-emerald-950 text-xs font-bold rounded-xl shadow hover:bg-emerald-50 transition-all flex items-center gap-1.5"
+              className="px-4 py-2 bg-white text-emerald-950 text-xs font-bold rounded-xl shadow hover:bg-emerald-50 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Layers className="h-3.5 w-3.5" /> Compare Municipalities
             </button>
             <button 
               onClick={() => onActionTrigger("Review Critical Issues")}
-              className="px-4 py-2 bg-emerald-800 text-white border border-emerald-700 text-xs font-bold rounded-xl shadow hover:bg-emerald-700 transition-all flex items-center gap-1.5"
+              className="px-4 py-2 bg-emerald-800 text-white border border-emerald-700 text-xs font-bold rounded-xl shadow hover:bg-emerald-700 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <ShieldAlert className="h-3.5 w-3.5" /> Review Critical Issues
-            </button>
-            <button 
-              onClick={() => onActionTrigger("Generate District Report")}
-              className="px-3 py-2 bg-emerald-900 text-emerald-100 border border-emerald-800 hover:bg-emerald-800 text-xs font-bold rounded-xl transition-all"
-              title="Download PDF"
-            >
-              <Download className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </div>
+
+      {alertMessage && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-bold flex items-center justify-between shadow-sm animate-scale-in">
+          <span className="flex items-center gap-1.5">
+            <Check className="h-4 w-4 text-emerald-650 shrink-0" />
+            {alertMessage}
+          </span>
+          <button onClick={() => setAlertMessage(null)} className="text-emerald-500 hover:text-emerald-700 font-black cursor-pointer px-1">✕</button>
+        </div>
+      )}
 
       {/* KPI GRID FOR COLLECTOR */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -339,14 +415,56 @@ export const CollectorDashboard: React.FC<CollectorDashboardProps> = ({ kpis, on
             </div>
           </div>
 
-          <button 
-            onClick={() => {
-              onActionTrigger("Approve Compactor Re-route to Melur");
-            }}
-            className="w-full mt-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md hover:scale-[1.01] transition-all text-center uppercase tracking-wider"
-          >
-            Approve & Execute Vehicle Re-Route
-          </button>
+          {reRouteApproved ? (
+            <div className="w-full mt-4 p-3 bg-emerald-700 text-white rounded-xl text-xs font-bold text-center flex items-center justify-center gap-1.5 animate-scale-in">
+              <Check className="h-4 w-4 text-white" /> COMPACTORS RE-ROUTED TO MELUR (ACTIVE)
+            </div>
+          ) : (
+            <button 
+              onClick={() => {
+                setIsReRouting(true);
+                onActionTrigger("Approve Compactor Re-route to Melur");
+                setTimeout(() => {
+                  setIsReRouting(false);
+                  setReRouteApproved(true);
+                  localStorage.setItem('smartward_collector_reroute_approved', 'true');
+                  
+                  // Update Melur's stats
+                  setMunicipalities(prev => {
+                    const next = prev.map(m => {
+                      if (m.name === 'Melur Town Panchayat') {
+                        return {
+                          ...m,
+                          score: 88,
+                          status: 'Compliant',
+                          tickets: 124,
+                          color: 'text-emerald-600',
+                          bg: 'bg-emerald-50'
+                        };
+                      }
+                      return m;
+                    });
+                    localStorage.setItem('smartward_collector_municipalities', JSON.stringify(next));
+                    return next;
+                  });
+
+                  setAlertMessage("Interim fleet re-routing successfully deployed to Melur Town Panchayat limits!");
+                  setTimeout(() => setAlertMessage(null), 4000);
+                }, 1500);
+              }}
+              disabled={isReRouting}
+              className="w-full mt-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md hover:scale-[1.01] transition-all text-center uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              {isReRouting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Broadcasting GPS Dispatch...
+                </>
+              ) : (
+                "Approve & Execute Vehicle Re-Route"
+              )}
+            </button>
+          )}
         </div>
 
       </div>
@@ -395,30 +513,58 @@ export const CollectorDashboard: React.FC<CollectorDashboardProps> = ({ kpis, on
           </div>
 
           <div className="divide-y divide-slate-100">
-            {criticalIssues.map((issue) => (
-              <div key={issue.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-0 last:pb-0">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200/50">{issue.id}</span>
-                    <h4 className="text-xs font-bold text-slate-800">{issue.title}</h4>
-                  </div>
-                  <p className="text-[10px] text-slate-400">
-                    Conflict desk: <strong className="text-slate-600">{issue.agency}</strong> • Impact: <strong className="text-slate-600">{issue.impact}</strong>
-                  </p>
+            {criticalIssues.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 font-bold text-xs space-y-2">
+                <div className="h-10 w-10 bg-emerald-50 text-emerald-650 rounded-full flex items-center justify-center mx-auto border border-emerald-100 shadow-sm">
+                  <Check className="h-5 w-5" />
                 </div>
-                <div className="flex items-center gap-2 font-semibold sm:self-center">
-                  <span className="text-[10px] text-slate-400 font-mono">{issue.duration}</span>
-                  <button 
-                    onClick={() => {
-                      onActionTrigger(`Inter-agency arbitrator dispatch: ${issue.id}`);
-                    }}
-                    className="px-2.5 py-1 bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-rose-100 transition-colors"
-                  >
-                    Force Clear
-                  </button>
-                </div>
+                <p>All active inter-agency deadlocks have been successfully cleared!</p>
               </div>
-            ))}
+            ) : (
+              criticalIssues.map((issue) => (
+                <div key={issue.id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-0 last:pb-0">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200/50">{issue.id}</span>
+                      <h4 className="text-xs font-bold text-slate-800">{issue.title}</h4>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      Conflict desk: <strong className="text-slate-600">{issue.agency}</strong> • Impact: <strong className="text-slate-600">{issue.impact}</strong>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 font-semibold sm:self-center">
+                    <span className="text-[10px] text-slate-400 font-mono">{issue.duration}</span>
+                    <button 
+                      onClick={() => {
+                        setClearingIssueId(issue.id);
+                        onActionTrigger(`Inter-agency arbitrator dispatch: ${issue.id}`);
+                        setTimeout(() => {
+                          setCriticalIssues(prev => {
+                            const next = prev.filter(i => i.id !== issue.id);
+                            localStorage.setItem('smartward_collector_critical_issues', JSON.stringify(next));
+                            return next;
+                          });
+                          setClearingIssueId(null);
+                          setAlertMessage(`Inter-agency roadblock ${issue.id} has been force cleared under magistrate authorization!`);
+                          setTimeout(() => setAlertMessage(null), 4000);
+                        }, 1200);
+                      }}
+                      disabled={clearingIssueId !== null}
+                      className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      {clearingIssueId === issue.id ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin text-rose-650" />
+                          Clearing...
+                        </>
+                      ) : (
+                        "Force Clear"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

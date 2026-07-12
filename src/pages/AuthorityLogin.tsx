@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
@@ -35,8 +35,19 @@ interface DemoAccount {
 }
 
 export const AuthorityLogin: React.FC = () => {
-  const { login, loading: authLoading } = useAuth();
+  const { user, login, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'authority') {
+        navigate('/authority/dashboard', { replace: true });
+      } else {
+        navigate('/citizen/dashboard', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   // Form states
   const [email, setEmail] = useState('');

@@ -9,8 +9,116 @@ import { motion, AnimatePresence } from 'motion/react';
 import { EscalationDialog } from '../../components/authority/EscalationDialog';
 import { getDepartmentData, MockComplaint } from '../../utils/departmentData';
 
+const CM_ESCALATED_ISSUES: MockComplaint[] = [
+  {
+    id: 'ESC-4022',
+    category: 'Water & Sewage',
+    title: 'Inter-district Drainage Canal Contamination Spillover',
+    location: 'Coimbatore-Tiruppur Border Canal Network',
+    slaDays: 3,
+    status: 'pending',
+    severity: 'critical',
+    reportedAt: '12 mins ago',
+    description: 'Coimbatore Dyeing Unit industrial runoff overflowing into Tiruppur agricultural canals. High priority inter-agency escalation. Local collectorates are in gridlock regarding jurisdictional clean-up costs.',
+    citizenName: 'Coimbatore Farmer Association',
+    preferredLanguage: 'English',
+    contact: '+91 90812 77412',
+    images: ['https://images.unsplash.com/photo-1599740831119-07284763f831?auto=format&fit=crop&w=800&q=80'],
+    ward: 'Coimbatore Division',
+    assignedTo: 'State Environmental Board'
+  },
+  {
+    id: 'ESC-9125',
+    category: 'Drainage & Storm Water',
+    title: 'Bypass Expressway Flood-Basin Sinkhole Structural Failure',
+    location: 'Madurai Bypass National Highway (NH-45)',
+    slaDays: 2,
+    status: 'active',
+    severity: 'critical',
+    reportedAt: '45 mins ago',
+    description: 'Major road subsidence over the primary storm drainage bed. Immediate threat to highway traffic and low-lying residential clusters. Escalated by Madurai District Collector for state emergency funds allocation.',
+    citizenName: 'Superintendent PWD Highway',
+    preferredLanguage: 'Tamil',
+    contact: '+91 94441 55021',
+    images: ['https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=800&q=80'],
+    ward: 'Madurai District',
+    assignedTo: 'PWD Highway Team'
+  },
+  {
+    id: 'ESC-8103',
+    category: 'Solid Waste Management',
+    title: 'State Highway Toxic Dump Combustion Emergency',
+    location: 'Salem Bypass Landfill Outer Rim',
+    slaDays: 1,
+    status: 'pending',
+    severity: 'critical',
+    reportedAt: '1 hour ago',
+    description: 'Unauthorized industrial waste dumped on the state highway margin has caught fire, releasing toxic fumes. Air quality index has crossed hazardous levels. Escalated by Salem District Health Officer for cross-agency fire-containment dispatch.',
+    citizenName: 'Salem Citizen Council',
+    preferredLanguage: 'English',
+    contact: '+91 98402 77412',
+    images: ['https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80'],
+    ward: 'Salem District',
+    assignedTo: 'Salem Disaster Management'
+  }
+];
+
+const COLLECTOR_ESCALATED_ISSUES: MockComplaint[] = [
+  {
+    id: 'ESC-MD-501',
+    category: 'Water & Sewage',
+    title: 'Anaimalai Reservoir Canal Valve Blockage',
+    location: 'Anaimalai Canal Headworks, Madurai',
+    slaDays: 2,
+    status: 'pending',
+    severity: 'critical',
+    reportedAt: '15 mins ago',
+    description: 'Irrigation canal control valve jammed causing severe water supply disruption in northern agricultural blocks. Escalated by Ward 12 Councillor for emergency technical team deployment due to a jurisdictional deadlock between PWD and Municipal Corporation.',
+    citizenName: 'Ward 12 Councillor Office',
+    preferredLanguage: 'Tamil',
+    contact: '+91 94445 12019',
+    images: ['https://images.unsplash.com/photo-1599740831119-07284763f831?auto=format&fit=crop&w=800&q=80'],
+    ward: 'Madurai North',
+    assignedTo: 'PWD Water Resources'
+  },
+  {
+    id: 'ESC-MD-502',
+    category: 'Solid Waste Management',
+    title: 'Mattuthavani Terminal Waste Accumulation Crisis',
+    location: 'Mattuthavani Integrated Bus Stand, Madurai',
+    slaDays: 3,
+    status: 'active',
+    severity: 'critical',
+    reportedAt: '1 hour ago',
+    description: 'Over 15 tons of unsegregated organic waste rotting behind the main terminal. Escalated by Madurai Corporation Commissioner. Local health inspectors are facing stiff resistance from the transit private vendors union, requiring District Magistrate administrative enforcement.',
+    citizenName: 'Municipal Commissioner Office',
+    preferredLanguage: 'English',
+    contact: '+91 98402 11025',
+    images: ['https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=800&q=80'],
+    ward: 'Madurai East',
+    assignedTo: 'SWM Enforcement Wing'
+  },
+  {
+    id: 'ESC-MD-503',
+    category: 'Drainage & Storm Water',
+    title: 'Sellur Bypass Core Drainage Conduit Collapse',
+    location: 'Sellur Rail Overbridge Bypass, Madurai',
+    slaDays: 1,
+    status: 'pending',
+    severity: 'critical',
+    reportedAt: '2 hours ago',
+    description: 'Structural collapse of a 4-foot brick conduit under the bypass road. Escalated by Assistant PWD Engineer. Heavy waterlogging has commenced. Local Corporation teams lack the structural heavy shoring equipment to stabilize the highway flank.',
+    citizenName: 'Assistant PWD Engineer',
+    preferredLanguage: 'English',
+    contact: '+91 90812 44321',
+    images: ['https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=800&q=80'],
+    ward: 'Madurai Central',
+    assignedTo: 'PWD Bridges & Highways Division'
+  }
+];
+
 export const ComplaintsPage: React.FC = () => {
-  const { currentRole, kpis, selectedDepartment } = useAuthority();
+  const { currentRole, kpis, selectedDepartment, setSelectedDepartment } = useAuthority();
   
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'active' | 'resolved'>('all');
@@ -35,12 +143,24 @@ export const ComplaintsPage: React.FC = () => {
 
   // Simulated complaints database
   const [complaints, setComplaints] = useState<MockComplaint[]>(() => {
+    if (currentRole.id === 'cm' || currentRole.id === 'minister') {
+      return CM_ESCALATED_ISSUES;
+    }
+    if (currentRole.id === 'collector') {
+      return COLLECTOR_ESCALATED_ISSUES;
+    }
     return getDepartmentData(selectedDepartment || 'Water Supply').complaints;
   });
 
   // Keep complaints in sync with switcher department
   useEffect(() => {
-    if (currentRole.id === 'officer') {
+    if (currentRole.id === 'cm' || currentRole.id === 'minister') {
+      setComplaints(CM_ESCALATED_ISSUES);
+      setSelectedTicketId(null);
+    } else if (currentRole.id === 'collector') {
+      setComplaints(COLLECTOR_ESCALATED_ISSUES);
+      setSelectedTicketId(null);
+    } else if (currentRole.id === 'officer' || currentRole.id === 'councillor') {
       const data = getDepartmentData(selectedDepartment);
       setComplaints(data.complaints);
       setSelectedTicketId(null); // Clear active ticket selection on department switch
@@ -242,10 +362,10 @@ export const ComplaintsPage: React.FC = () => {
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-black tracking-tight text-white font-sans uppercase">
-              {currentRole.department}
+              {(currentRole.id === 'cm' || currentRole.id === 'minister') ? 'Apex State Command' : currentRole.id === 'collector' ? 'District Magistracy Command' : currentRole.department}
             </h2>
             <p className="text-[10px] sm:text-xs text-sky-200/80 font-mono font-semibold">
-              Madurai Municipal Corporation • {currentRole.jurisdiction}
+              {(currentRole.id === 'cm' || currentRole.id === 'minister') ? 'Tamil Nadu Secretariat' : currentRole.id === 'collector' ? 'Madurai District Collectorate' : 'Madurai Municipal Corporation'} • {currentRole.jurisdiction}
             </p>
           </div>
         </div>
@@ -271,10 +391,14 @@ export const ComplaintsPage: React.FC = () => {
             {/* Header Title Block */}
             <div className="space-y-1">
               <h2 className="font-display text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Department Complaint Queue
+                {(currentRole.id === 'cm' || currentRole.id === 'minister') ? 'Sovereign Critical Issues Queue' : currentRole.id === 'collector' ? 'Magistrate Critical Issues Queue' : 'Department Complaint Queue'}
               </h2>
               <p className="text-xs text-slate-500 font-semibold">
-                Official operational ledger of citizen complaints routed to Water Supply Division.
+                {(currentRole.id === 'cm' || currentRole.id === 'minister') 
+                  ? 'Escalated administrative and infrastructure issues from municipal and district authorities requiring state-level action.'
+                  : currentRole.id === 'collector'
+                  ? 'Escalated infrastructure and boundary deadlocks routed from ward councillors and municipal officers requiring collector-level intervention.'
+                  : `Official operational ledger of citizen complaints routed to ${selectedDepartment || 'Water Supply Division'}.`}
               </p>
             </div>
 
@@ -328,19 +452,48 @@ export const ComplaintsPage: React.FC = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-3 justify-between items-center bg-white p-4 rounded-xl border border-slate-200/80">
-              <div className="relative w-full md:max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder={`Search ${selectedDepartment} tickets by ID, location, or keyword...`}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:bg-white focus:ring-sky-600 transition-all font-semibold"
-                />
+            <div className="flex flex-col lg:flex-row gap-3 justify-between items-stretch lg:items-center bg-white p-4 rounded-xl border border-slate-200/80">
+              <div className="flex flex-col md:flex-row gap-3 flex-grow">
+                <div className="relative flex-grow">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    placeholder={`Search ${selectedDepartment} tickets by ID, location, or keyword...`}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:bg-white focus:ring-sky-600 transition-all font-semibold"
+                  />
+                </div>
+
+                {/* Department Dropdown for Councillor & Officer */}
+                {(currentRole.id === 'councillor' || currentRole.id === 'officer') && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs font-black text-slate-400 uppercase tracking-wider whitespace-nowrap font-mono">Dept:</span>
+                    <select
+                      value={selectedDepartment}
+                      onChange={(e) => setSelectedDepartment(e.target.value)}
+                      className="bg-slate-50 border border-slate-200 hover:border-sky-500 text-xs font-bold text-slate-700 py-2.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer transition-all w-full md:w-56"
+                    >
+                      {[
+                        'Roads Department',
+                        'Water Supply',
+                        'Sanitation',
+                        'Electrical',
+                        'Drainage & Storm Water',
+                        'Solid Waste Management',
+                        'Street Lighting',
+                        'Parks & Public Spaces'
+                      ].map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
-              <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+              <div className="flex gap-2 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 justify-start lg:justify-end">
                 {(['all', 'pending', 'active', 'resolved'] as const).map((st) => (
                   <button
                     key={st}
@@ -507,12 +660,14 @@ export const ComplaintsPage: React.FC = () => {
 
               {/* ACTION MENU STRIP */}
               <div className="flex flex-wrap items-center gap-2">
-                <button 
-                  onClick={handleAcceptComplaint}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-lg text-slate-700 transition-colors flex items-center gap-1.5"
-                >
-                  Accept Complaint
-                </button>
+                {selectedComplaint?.status === 'pending' && (
+                  <button 
+                    onClick={handleAcceptComplaint}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-lg text-slate-700 transition-colors flex items-center gap-1.5"
+                  >
+                    Accept Complaint
+                  </button>
+                )}
                 <button 
                   onClick={() => setIsAssignDialogOpen(true)}
                   className="px-3 py-1.5 bg-sky-950 hover:bg-sky-900 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"

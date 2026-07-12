@@ -1,11 +1,63 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuthority } from '../../contexts/AuthorityContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
-  User, Key, Shield, Landmark, MapPin, Contact, Mail, Phone, Calendar 
+  User, Key, Shield, Landmark, MapPin, Contact, Mail, Phone, Calendar, Camera
 } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
   const { currentRole } = useAuthority();
+  const { user, updateUser } = useAuth();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          const base64 = reader.result as string;
+          localStorage.setItem(`smartward_avatar_${currentRole.id}`, base64);
+          updateUser({ avatarUrl: base64 });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result) {
+            const base64 = reader.result as string;
+            localStorage.setItem(`smartward_avatar_${currentRole.id}`, base64);
+            updateUser({ avatarUrl: base64 });
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const currentAvatar = localStorage.getItem(`smartward_avatar_${currentRole.id}`) || user?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentRole.name)}&backgroundColor=2563eb&textColor=white`;
 
   return (
     <div className="space-y-6">
@@ -34,9 +86,25 @@ export const ProfilePage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 text-left">
         
         {/* Left Side: Professional ID Card */}
-        <div className="md:col-span-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 p-6 rounded-2xl md3-shadow-lg text-white space-y-6 relative overflow-hidden flex flex-col justify-between">
+        <div 
+          onDragEnter={handleDrag}
+          onDragOver={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+          className={`md:col-span-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 p-6 rounded-2xl md3-shadow-lg text-white space-y-6 relative overflow-hidden flex flex-col justify-between transition-all duration-300 border-2 ${
+            dragActive ? 'border-gov-blue scale-[1.02] ring-4 ring-gov-blue/20' : 'border-transparent'
+          }`}
+        >
           <div className="absolute top-0 right-0 h-40 w-40 bg-gradient-to-bl from-white/5 to-transparent rounded-full -mr-12 -mt-12 pointer-events-none" />
           
+          {dragActive && (
+            <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center gap-2 text-white z-20 animate-fade-in pointer-events-none">
+              <Camera className="h-8 w-8 text-gov-blue animate-bounce" />
+              <p className="text-xs font-bold font-display text-center px-4">Drop Image to Upload Photo</p>
+              <p className="text-[9px] text-slate-400 font-mono">Format: JPG, PNG, WEBP</p>
+            </div>
+          )}
+
           <div className="flex justify-between items-start">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-md">
               <Landmark className="h-5 w-5" />
@@ -45,13 +113,39 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           <div className="space-y-4">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handlePhotoUpload} 
+              accept="image/*" 
+              className="hidden" 
+            />
             <div className="flex items-center gap-4">
-              <div className={`h-14 w-14 rounded-full flex items-center justify-center text-lg font-bold text-white font-mono shrink-0 border-2 border-white/20 ${currentRole.avatarColor}`}>
-                {currentRole.avatarSeed}
+              <div 
+                className="relative group cursor-pointer shrink-0 animate-fade-in" 
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to upload profile photo"
+              >
+                <img 
+                  src={currentAvatar} 
+                  alt={currentRole.name} 
+                  className="h-14 w-14 rounded-full border-2 border-white/30 shadow-md object-cover group-hover:opacity-80 transition-all"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                  <Camera className="h-4 w-4 text-white" />
+                </div>
               </div>
               <div className="space-y-0.5">
                 <h3 className="font-display text-base font-black tracking-tight">{currentRole.name}</h3>
                 <span className="text-[10px] font-bold tracking-wider text-gov-blue-light uppercase font-mono">{currentRole.roleName}</span>
+                <button 
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-[9px] font-mono font-bold text-slate-300 hover:text-white hover:underline cursor-pointer flex items-center gap-1 mt-0.5"
+                >
+                  <Camera className="h-3 w-3" /> Upload ID Photo
+                </button>
               </div>
             </div>
 

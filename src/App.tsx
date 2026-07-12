@@ -21,7 +21,6 @@ import { DepartmentDashboard } from './pages/DepartmentDashboard';
 import { ComplaintsPage } from './pages/authority/ComplaintsPage';
 import { ReportsPage } from './pages/authority/ReportsPage';
 import { NotificationsPage } from './pages/authority/NotificationsPage';
-import { SettingsPage } from './pages/authority/SettingsPage';
 import { ProfilePage } from './pages/authority/ProfilePage';
 
 import { AnimatePresence, motion } from 'motion/react';
@@ -120,7 +119,6 @@ const AnimatedRoutes: React.FC = () => {
           <Route path="/authority/complaints" element={<AuthorityRoute><ComplaintsPage /></AuthorityRoute>} />
           <Route path="/authority/reports" element={<AuthorityRoute><ReportsPage /></AuthorityRoute>} />
           <Route path="/authority/notifications" element={<AuthorityRoute><NotificationsPage /></AuthorityRoute>} />
-          <Route path="/authority/settings" element={<AuthorityRoute><SettingsPage /></AuthorityRoute>} />
           <Route path="/authority/profile" element={<AuthorityRoute><ProfilePage /></AuthorityRoute>} />
           <Route path="/authority/dashboard/department" element={<AuthorityRoute><DepartmentDashboard /></AuthorityRoute>} />
 

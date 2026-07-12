@@ -49,14 +49,12 @@ export const AuthorityLayout: React.FC<AuthorityLayoutProps> = ({ children }) =>
       navigate('/authority/complaints');
     } else if (id === 'field_staff') {
       navigate('/authority/dashboard/department');
-    } else if (['ai_recommendations', 'ai_insights', 'ai_strategic_insights', 'ward_analytics', 'constituency_analytics', 'state_performance', 'district_analytics', 'district_rankings', 'ward_performance', 'heatmaps'].includes(id)) {
+    } else if (['ai_recommendations', 'ai_insights', 'ai_strategic_insights', 'ward_analytics', 'constituency_analytics', 'state_performance', 'district_analytics', 'district_rankings', 'state_analytics', 'ward_performance', 'heatmaps'].includes(id)) {
       navigate('/authority/dashboard?tab=analytics');
     } else if (['reports', 'performance_reports'].includes(id)) {
       navigate('/authority/reports');
     } else if (id === 'notifications') {
       navigate('/authority/notifications');
-    } else if (id === 'settings') {
-      navigate('/authority/settings');
     } else {
       navigate('/authority/dashboard');
     }
@@ -70,7 +68,7 @@ export const AuthorityLayout: React.FC<AuthorityLayoutProps> = ({ children }) =>
 
     if (path === '/authority/dashboard') {
       if (tabParam === 'analytics') {
-        if (currentRole.id === 'cm') return 'district_rankings';
+        if (currentRole.id === 'cm') return 'state_analytics';
         if (currentRole.id === 'collector') return 'district_analytics';
         if (currentRole.id === 'officer') return 'ai_recommendations';
         if (currentRole.id === 'councillor') return 'ward_analytics';
@@ -86,7 +84,8 @@ export const AuthorityLayout: React.FC<AuthorityLayoutProps> = ({ children }) =>
       if (currentRole.id === 'officer') return 'assigned_complaints';
       if (currentRole.id === 'councillor') return 'ward_complaints';
       if (currentRole.id === 'collector') return 'critical_issues';
-      if (currentRole.id === 'cm') return 'critical_alerts';
+      if (currentRole.id === 'cm') return 'critical_issues';
+      if (currentRole.id === 'minister') return 'critical_issues';
       return 'assigned_complaints';
     }
     if (path === '/authority/reports') {
@@ -94,7 +93,6 @@ export const AuthorityLayout: React.FC<AuthorityLayoutProps> = ({ children }) =>
       return 'reports';
     }
     if (path === '/authority/notifications') return 'notifications';
-    if (path === '/authority/settings') return 'settings';
     return 'dashboard';
   }, [location.pathname, location.search, currentRole.id]);
 

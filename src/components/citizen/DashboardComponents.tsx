@@ -20,7 +20,8 @@ import {
   BarChart3,
   Building2,
   ThumbsUp,
-  Star
+  Star,
+  Camera
 } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -322,6 +323,7 @@ interface ProfileCardProps {
   phone?: string;
   address?: string;
   onEdit: () => void;
+  onPhotoUpload?: (base64: string) => void;
 }
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({
@@ -333,8 +335,24 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   avatarUrl,
   phone,
   address,
-  onEdit
+  onEdit,
+  onPhotoUpload
 }) => {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && onPhotoUpload) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result) {
+          onPhotoUpload(reader.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4 text-left" id="citizen-sidebar-profile">
       <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
@@ -343,20 +361,44 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
       </div>
 
       <div className="flex flex-col items-center text-center space-y-2 py-2">
-        <div className="relative">
+        <div 
+          className="relative group cursor-pointer" 
+          onClick={() => fileInputRef.current?.click()}
+          title="Click to upload profile photo"
+        >
           <img 
             src={avatarUrl} 
             alt={name} 
-            className="h-16 w-16 rounded-full border border-slate-200 shadow-sm object-cover"
+            className="h-16 w-16 rounded-full border border-slate-200 shadow-sm object-cover group-hover:opacity-75 transition-opacity"
             referrerPolicy="no-referrer"
           />
+          {/* Camera Upload Overlay */}
+          <div className="absolute inset-0 rounded-full bg-slate-900/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+            <Camera className="h-5 w-5 text-white" />
+          </div>
           <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-gov-blue text-white flex items-center justify-center border border-white text-[10px] font-bold">
             ✓
           </div>
         </div>
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*"
+          className="hidden"
+        />
+
         <div>
           <h5 className="font-bold text-slate-900 text-sm leading-tight">{name}</h5>
           <p className="text-[11px] text-slate-400 font-mono font-bold">{email}</p>
+          <button 
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-1 text-[10px] font-bold text-gov-blue hover:underline cursor-pointer flex items-center justify-center gap-1 mx-auto"
+          >
+            <Camera className="h-3 w-3" /> Upload Photo
+          </button>
         </div>
       </div>
 

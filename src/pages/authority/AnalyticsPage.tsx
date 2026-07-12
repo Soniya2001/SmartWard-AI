@@ -5,11 +5,30 @@ import {
   PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
 } from 'recharts';
 import { 
-  BarChart3, Sparkles, TrendingUp, AlertTriangle, ShieldCheck, HelpCircle 
+  BarChart3, Sparkles, TrendingUp, AlertTriangle, ShieldCheck, HelpCircle,
+  Shield, X, Loader2, Check
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const AnalyticsPage: React.FC = () => {
   const { currentRole, chartData, kpis } = useAuthority();
+  const [isSopOpen, setIsSopOpen] = React.useState(false);
+  const [sopStatus, setSopStatus] = React.useState<'idle' | 'running' | 'completed'>('idle');
+  const [sopStep, setSopStep] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    let timer: any;
+    if (sopStatus === 'running') {
+      if (sopStep < 5) {
+        timer = setTimeout(() => {
+          setSopStep(prev => prev + 1);
+        }, 1000);
+      } else {
+        setSopStatus('completed');
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [sopStatus, sopStep]);
 
   return (
     <div className="space-y-8">
@@ -50,7 +69,7 @@ export const AnalyticsPage: React.FC = () => {
           </p>
         </div>
         <button 
-          onClick={() => alert('Dispatched precautionary safety alerts and resources to division superintendents.')}
+          onClick={() => setIsSopOpen(true)}
           className="shrink-0 z-10 px-4 py-2 bg-gov-blue hover:bg-gov-blue-dark text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer shadow-sm"
         >
           Enforce Precautionary SOP
@@ -192,6 +211,174 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Sandbox Simulated Action Feedback Dialog */}
+      <AnimatePresence>
+        {isSopOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm shadow-xl"
+              onClick={() => {
+                setIsSopOpen(false);
+                setSopStatus('idle');
+                setSopStep(0);
+              }}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative bg-white w-full max-w-md rounded-3xl md3-shadow-lg p-6 border border-slate-200 text-left flex flex-col gap-5 z-10 font-sans"
+            >
+              <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600">
+                    <Shield className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-sm font-black text-slate-900 tracking-tight leading-none">
+                      Precautionary SOP Console
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-mono uppercase tracking-wider mt-1">
+                      Ward 42 • Flood Mitigation
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsSopOpen(false);
+                    setSopStatus('idle');
+                    setSopStep(0);
+                  }}
+                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/60 text-xs text-slate-600 leading-relaxed font-semibold">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-teal-700 font-mono uppercase mb-1">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" /> Predictive Telemetry Threat Vector
+                </div>
+                High probability of waterlogging near Melur Road bypass limits due to drainage flow constriction. Running this SOP initiates emergency preventative operations.
+              </div>
+
+              {/* Status meter & controls */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold font-mono">
+                  <span className="text-slate-400">Current Status:</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    sopStatus === 'idle' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                    sopStatus === 'running' ? 'bg-blue-50 text-blue-600 border border-blue-100 animate-pulse' :
+                    'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                  }`}>
+                    {sopStatus === 'idle' ? '🟠 PENDING AUTHORIZATION' : 
+                     sopStatus === 'running' ? '🔵 RUNNING DISPATCHES' : 
+                     '🟢 ACTIVE & DEPLOYED'}
+                  </span>
+                </div>
+
+                {sopStatus !== 'idle' && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] text-slate-400 font-mono font-bold uppercase">
+                      <span>Dispatch Progress</span>
+                      <span>{Math.round((sopStep / 5) * 100)}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full bg-teal-650 rounded-full" 
+                        style={{ width: `${(sopStep / 5) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* SOP Steps list */}
+              <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                {[
+                  { title: "Localized SMS Alert Broadcast", desc: "Sent cell-broadcast emergency alerts to 1,240 KK Nagar & Melur Road residents." },
+                  { title: "Deploy De-Watering Rigs", desc: "Moved 2 heavy-duty diesel de-watering pump rigs to Melur Road Corridor." },
+                  { title: "Stormwater Pipeline Desilting", desc: "Clearance crews initiated emergency desilting at bottleneck lines." },
+                  { title: "Emergency Response Standby", desc: "Mobilized Ward 42 disaster-response squad leads on active standby." },
+                  { title: "Activate Spatial Telemetry Feed", desc: "Connected Melur Road waterlevel and rate-flow sensors to Central Command." }
+                ].map((step, idx) => {
+                  const isCompleted = idx < sopStep;
+                  const isCurrent = idx === sopStep && sopStatus === 'running';
+                  return (
+                    <div key={idx} className={`flex gap-3 text-xs border-b border-slate-100 pb-2.5 last:border-0 last:pb-0 transition-opacity ${
+                      isCompleted || isCurrent ? 'opacity-100' : 'opacity-40'
+                    }`}>
+                      <div className="shrink-0 pt-0.5">
+                        {isCompleted ? (
+                          <div className="h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-sm animate-scale-in">
+                            <Check className="h-3.5 w-3.5 stroke-[3]" />
+                          </div>
+                        ) : isCurrent ? (
+                          <div className="h-5 w-5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center animate-spin">
+                            <Loader2 className="h-3.5 w-3.5" />
+                          </div>
+                        ) : (
+                          <div className="h-5 w-5 rounded-full border border-slate-200 flex items-center justify-center text-[10px] text-slate-300 font-mono font-bold">
+                            {idx + 1}
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-0.5 text-left">
+                        <h4 className={`text-xs font-bold leading-tight ${isCompleted ? 'text-slate-800' : isCurrent ? 'text-blue-700 font-black' : 'text-slate-500'}`}>
+                          {step.title}
+                        </h4>
+                        <p className="text-[10px] text-slate-400 font-medium leading-normal">
+                          {step.desc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer buttons */}
+              <div className="pt-2">
+                {sopStatus === 'idle' ? (
+                  <button 
+                    onClick={() => setSopStatus('running')}
+                    className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all flex items-center justify-center gap-1.5"
+                  >
+                    ⚡ Authorize &amp; Deploy SOP Protocols
+                  </button>
+                ) : sopStatus === 'running' ? (
+                  <button 
+                    disabled
+                    className="w-full py-2.5 bg-slate-100 text-slate-400 text-xs font-bold rounded-xl border border-slate-200 flex items-center justify-center gap-2 cursor-not-allowed animate-pulse"
+                  >
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" /> Deploying Preventative Measures...
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl space-y-1 text-[11px] text-slate-600 font-semibold leading-relaxed text-left">
+                      <span className="font-bold text-emerald-800 block text-xs">🟢 All Systems Operational</span>
+                      Emergency dispatch complete. All field components have confirmed receipt. Melur Road corridor stormwater clearance is actively in progress.
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setIsSopOpen(false);
+                        setSopStatus('idle');
+                        setSopStep(0);
+                      }}
+                      className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-all"
+                    >
+                      Dismiss Console
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

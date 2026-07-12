@@ -29,7 +29,9 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthority } from '../contexts/AuthorityContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // Structure of a government role option
 export interface GovernmentRole {
@@ -54,7 +56,6 @@ export function getSidebarMenuItems(roleId: string, criticalBadgeCount: number) 
         { id: 'field_staff', label: 'Field Staff', icon: Users },
         { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
         { id: 'notifications', label: 'Notifications', icon: Bell, badge: 4 },
-        { id: 'settings', label: 'Settings', icon: Settings },
       ];
     case 'councillor':
       return [
@@ -62,7 +63,6 @@ export function getSidebarMenuItems(roleId: string, criticalBadgeCount: number) 
         { id: 'ward_complaints', label: 'Ward Complaints', icon: FileText, badge: criticalBadgeCount },
         { id: 'ward_analytics', label: 'Ward Analytics', icon: BarChart3 },
         { id: 'notifications', label: 'Notifications', icon: Bell, badge: 4 },
-        { id: 'settings', label: 'Settings', icon: Settings },
       ];
     case 'mla':
       return [
@@ -70,43 +70,37 @@ export function getSidebarMenuItems(roleId: string, criticalBadgeCount: number) 
         { id: 'constituency_analytics', label: 'Constituency Analytics', icon: BarChart3 },
         { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
         { id: 'notifications', label: 'Notifications', icon: Bell, badge: 4 },
-        { id: 'settings', label: 'Settings', icon: Settings },
       ];
     case 'commissioner':
       return [
         { id: 'dashboard', label: 'Corporation Dashboard', icon: LayoutDashboard },
         { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
         { id: 'notifications', label: 'Notifications', icon: Bell, badge: 4 },
-        { id: 'settings', label: 'Settings', icon: Settings },
       ];
     case 'collector':
       return [
         { id: 'dashboard', label: 'District Dashboard', icon: LayoutDashboard },
-        { id: 'corporation_comparison', label: 'Corporation Comparison', icon: Layers },
         { id: 'district_analytics', label: 'District Analytics', icon: BarChart3 },
         { id: 'critical_issues', label: 'Critical Issues', icon: AlertCircle, badge: criticalBadgeCount },
         { id: 'performance_reports', label: 'Performance Reports', icon: FileSpreadsheet },
         { id: 'notifications', label: 'Notifications', icon: Bell, badge: 4 },
-        { id: 'settings', label: 'Settings', icon: Settings },
       ];
     case 'minister':
       return [
         { id: 'dashboard', label: 'State Dashboard', icon: LayoutDashboard },
-        { id: 'state_performance', label: 'State Performance', icon: BarChart3 },
+        { id: 'state_performance', label: 'State Analytics', icon: BarChart3 },
+        { id: 'critical_issues', label: 'Critical Issues', icon: AlertCircle, badge: criticalBadgeCount },
         { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
         { id: 'notifications', label: 'Notifications', icon: Bell, badge: 4 },
-        { id: 'settings', label: 'Settings', icon: Settings },
       ];
     case 'cm':
     default:
       return [
         { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard },
-        { id: 'district_rankings', label: 'District Rankings', icon: BarChart3 },
-        { id: 'critical_alerts', label: 'Critical Alerts', icon: AlertCircle, badge: criticalBadgeCount },
-        { id: 'ai_strategic_insights', label: 'AI Strategic Insights', icon: Sparkles },
+        { id: 'state_analytics', label: 'State Analytics', icon: BarChart3 },
+        { id: 'critical_issues', label: 'Critical Issues', icon: AlertCircle, badge: criticalBadgeCount },
         { id: 'performance_reports', label: 'Performance Reports', icon: FileSpreadsheet },
         { id: 'notifications', label: 'Notifications', icon: Bell, badge: 4 },
-        { id: 'settings', label: 'Settings', icon: Settings },
       ];
   }
 }
@@ -308,7 +302,9 @@ export const DynamicHeader: React.FC<DynamicHeaderProps> = ({
   notifications,
   handleLogout
 }) => {
+  const navigate = useNavigate();
   const { selectedDepartment, setSelectedDepartment } = useAuthority();
+  const { user } = useAuth();
 
   const departments = [
     'Roads Department',
@@ -349,55 +345,25 @@ export const DynamicHeader: React.FC<DynamicHeaderProps> = ({
       </div>
 
       {/* Center: Search input */}
-      <div className="hidden md:flex items-center max-w-md w-full px-4">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search complaints, wards, or municipal codes..."
-            value={globalSearch}
-            onChange={(e) => setGlobalSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:bg-white focus:ring-gov-blue transition-all font-semibold"
-            id="global-search"
-          />
+      {currentRole.id !== 'councillor' && currentRole.id !== 'officer' && (
+        <div className="hidden md:flex items-center max-w-md w-full px-4">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search complaints, wards, or municipal codes..."
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:bg-white focus:ring-gov-blue transition-all font-semibold"
+              id="global-search"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Right: Quick actions, notifications, and dynamic role switching demo selector */}
       <div className="flex items-center gap-3">
         
-        {/* DEPARTMENT SWITCHER (DEMO MODE) */}
-        {currentRole.id === 'officer' && (
-          <div className="flex items-center gap-2 border-r border-slate-200 pr-3 mr-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider hidden md:inline">Current Department:</span>
-              <select
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="bg-slate-50 border border-slate-200 hover:border-gov-blue text-xs font-bold text-slate-700 py-1 px-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-gov-blue cursor-pointer transition-all"
-                id="department-demo-switcher"
-              >
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Demo Mode Badge with Tooltip */}
-            <div className="relative group inline-flex">
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 cursor-help flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                Demo Mode
-              </span>
-              <div className="absolute right-0 top-full mt-2 w-56 p-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 shadow-md font-semibold font-sans leading-normal">
-                Department switching is enabled for demonstration purposes. In production, the department is determined automatically from the logged-in officer.
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* CRITICAL ROLE SWITCHER */}
         <div className="relative">
           <button
@@ -519,9 +485,18 @@ export const DynamicHeader: React.FC<DynamicHeaderProps> = ({
             className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-100 transition-colors focus:outline-none"
             id="top-profile-btn"
           >
-            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white font-mono ${currentRole.avatarColor}`}>
-              {currentRole.avatarSeed}
-            </div>
+            {localStorage.getItem(`smartward_avatar_${currentRole.id}`) || user?.avatarUrl ? (
+              <img 
+                src={localStorage.getItem(`smartward_avatar_${currentRole.id}`) || user?.avatarUrl} 
+                alt={currentRole.name} 
+                className="h-7 w-7 rounded-full object-cover border border-slate-200"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white font-mono ${currentRole.avatarColor}`}>
+                {currentRole.avatarSeed}
+              </div>
+            )}
           </button>
 
           <AnimatePresence>
@@ -535,9 +510,18 @@ export const DynamicHeader: React.FC<DynamicHeaderProps> = ({
                   className="absolute right-0 mt-1.5 w-64 bg-white rounded-xl border border-slate-200 md3-shadow-lg z-50 py-1.5 text-left"
                 >
                   <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold text-white font-mono ${currentRole.avatarColor}`}>
-                      {currentRole.avatarSeed}
-                    </div>
+                    {localStorage.getItem(`smartward_avatar_${currentRole.id}`) || user?.avatarUrl ? (
+                      <img 
+                        src={localStorage.getItem(`smartward_avatar_${currentRole.id}`) || user?.avatarUrl} 
+                        alt={currentRole.name} 
+                        className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold text-white font-mono ${currentRole.avatarColor}`}>
+                        {currentRole.avatarSeed}
+                      </div>
+                    )}
                     <div className="space-y-0.5">
                       <h4 className="text-xs font-bold text-slate-900 leading-tight">{currentRole.name}</h4>
                       <span className="text-[10px] text-gov-blue font-bold tracking-wide uppercase font-mono">{currentRole.badge}</span>
@@ -547,22 +531,10 @@ export const DynamicHeader: React.FC<DynamicHeaderProps> = ({
 
                   <div className="py-1">
                     <button
-                      onClick={() => { setProfileMenuOpen(false); alert('Profile preference dialogs staged for Module 3.'); }}
+                      onClick={() => { setProfileMenuOpen(false); navigate('/authority/profile'); }}
                       className="w-full px-4 py-2 hover:bg-slate-50 text-left text-xs font-semibold text-slate-700 flex items-center gap-2"
                     >
                       <Users className="h-4 w-4 text-slate-400" /> My Profile
-                    </button>
-                    <button
-                      onClick={() => { setProfileMenuOpen(false); alert('Account settings variables staged.'); }}
-                      className="w-full px-4 py-2 hover:bg-slate-50 text-left text-xs font-semibold text-slate-700 flex items-center gap-2"
-                    >
-                      <Settings className="h-4 w-4 text-slate-400" /> Account Preferences
-                    </button>
-                    <button
-                      onClick={() => { setProfileMenuOpen(false); alert('System keys synced securely.'); }}
-                      className="w-full px-4 py-2 hover:bg-slate-50 text-left text-xs font-semibold text-slate-700 flex items-center gap-2"
-                    >
-                      <Shield className="h-4 w-4 text-slate-400" /> Security Keys
                     </button>
                   </div>
 

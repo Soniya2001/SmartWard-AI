@@ -189,7 +189,7 @@ const REWARD_BADGES: DemoRewardBadge[] = [
 ];
 
 export const CitizenDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
   const profilePhotoInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -478,6 +478,11 @@ export const CitizenDashboard: React.FC = () => {
               avatarUrl={profileAvatarUrl}
               phone={profilePhone}
               address={profileAddress}
+              onPhotoUpload={(base64) => {
+                setProfileAvatarUrl(base64);
+                setTempAvatarUrl(base64);
+                updateUser({ avatarUrl: base64 });
+              }}
               onEdit={() => {
                 setTempName(profileName);
                 setTempWard(profileWard);
@@ -749,6 +754,7 @@ export const CitizenDashboard: React.FC = () => {
                       setProfilePhone(tempPhone);
                       setProfileAddress(tempAddress);
                       setProfileNotifications({...tempNotifications});
+                      updateUser({ name: tempName, avatarUrl: tempAvatarUrl });
                       setIsProfileEditOpen(false);
                       alert('Identification profile metadata saved successfully!');
                     }}

@@ -7,7 +7,8 @@ import {
 import { 
   MapPin, AlertCircle, Sparkles, CheckCircle2, Clock, ThumbsUp, 
   Map as MapIcon, Send, Eye, ShieldAlert, Award, ArrowUpRight,
-  TrendingUp, RefreshCw, Star, Info, ListFilter, Download
+  TrendingUp, RefreshCw, Star, Info, ListFilter, Download,
+  X, Loader2, Check, MessageSquare, AlertTriangle, Trash2, User, Calendar
 } from 'lucide-react';
 import { EscalationDialog } from '../EscalationDialog';
 import { useAuthority } from '../../../contexts/AuthorityContext';
@@ -46,10 +47,53 @@ export const CouncillorDashboard: React.FC<CouncillorDashboardProps> = ({ kpis, 
     { name: 'Electrical Division', resolvedPct: 72, color: '#F59E0B', tickets: 18 }
   ];
 
-  const escalations = [
-    { id: 'ESC-402', title: 'Major Sewer overflow on KK Nagar Road', sector: 'KK Nagar Enclave', duration: 'Overdue by 4.5 hrs', priority: 'Critical', reporter: 'Ward 42 Association' },
-    { id: 'ESC-408', title: 'Drinking water pipeline contamination', sector: 'Melur Road Corridor', duration: 'Overdue by 2 hrs', priority: 'High', reporter: 'Resident Senthil' }
-  ];
+  const [escalations, setEscalations] = useState([
+    { id: 'ESC-402', title: 'Major Sewer overflow on KK Nagar Road', sector: 'KK Nagar Enclave', duration: 'Overdue by 4.5 hrs', priority: 'Critical', reporter: 'Ward 42 Association', status: 'pending' },
+    { id: 'ESC-408', title: 'Drinking water pipeline contamination', sector: 'Melur Road Corridor', duration: 'Overdue by 2 hrs', priority: 'High', reporter: 'Resident Senthil', status: 'pending' }
+  ]);
+
+  const [activeDispatchEscalation, setActiveDispatchEscalation] = useState<any | null>(null);
+  const [selectedDispatchCrew, setSelectedDispatchCrew] = useState<string>('Emergency Sewer Jetting Unit B');
+  const [dispatchPriority, setDispatchPriority] = useState<string>('Emergency Override');
+  const [specialInstructions, setSpecialInstructions] = useState<string>('');
+  const [isDispatching, setIsDispatching] = useState<boolean>(false);
+  const [dispatchStep, setDispatchStep] = useState<number>(0);
+  const [dispatchSuccess, setDispatchSuccess] = useState<boolean>(false);
+
+  const [isCommentsInboxOpen, setIsCommentsInboxOpen] = useState(false);
+  const [comments, setComments] = useState([
+    { id: 'C-01', citizen: 'Anand Srinivasan', rating: 5, comment: 'Canal desilting on Central Avenue was completed in record time. Thanks to the councillor\'s office!', category: 'Drainage & Storm Water', date: '3 hrs ago', replied: false, replyText: '', status: 'new' },
+    { id: 'C-02', citizen: 'Meenakshi Sundaram', rating: 2, comment: 'KK Nagar Road sewer water is still overflowing near the school crossing. The smell is unbearable.', category: 'Sanitation', date: '5 hrs ago', replied: false, replyText: '', status: 'new' },
+    { id: 'C-03', citizen: 'Karthik Raja', rating: 1, comment: 'Drinking water has a muddy yellow tint since yesterday. Please check the mixing with drainage.', category: 'Water Supply', date: '1 day ago', replied: false, replyText: '', status: 'new' },
+    { id: 'C-04', citizen: 'Priya Dev', rating: 4, comment: 'Garbage truck is coming on time now at Gomathipuram extension. Much appreciated.', category: 'Solid Waste Management', date: '2 days ago', replied: false, replyText: '', status: 'new' }
+  ]);
+
+  const [activeReplyCommentId, setActiveReplyCommentId] = useState<string | null>(null);
+  const [localReplyText, setLocalReplyText] = useState<string>('');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    let timer: any;
+    if (isDispatching) {
+      if (dispatchStep < 3) {
+        timer = setTimeout(() => {
+          setDispatchStep(prev => prev + 1);
+        }, 1000);
+      } else {
+        setIsDispatching(false);
+        setDispatchSuccess(true);
+        // Mark escalation as dispatched!
+        setEscalations(prev => prev.map(esc => esc.id === activeDispatchEscalation.id ? { ...esc, status: 'dispatched', duration: 'Dispatched (Active)' } : esc));
+        setToastMessage(`Sovereign Force Dispatch authorized! Crew sent to ${activeDispatchEscalation.sector}.`);
+        setTimeout(() => {
+          setActiveDispatchEscalation(null);
+          setDispatchSuccess(false);
+          setDispatchStep(0);
+        }, 2000);
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [isDispatching, dispatchStep]);
 
   const ratingDistribution = [
     { stars: 5, count: 72, pct: 65, color: 'bg-emerald-500' },
@@ -265,13 +309,6 @@ export const CouncillorDashboard: React.FC<CouncillorDashboardProps> = ({ kpis, 
               className="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl shadow hover:bg-rose-700 transition-all flex items-center gap-1.5"
             >
               <ShieldAlert className="h-3.5 w-3.5" /> Escalate Issue
-            </button>
-            <button 
-              onClick={() => onActionTrigger("Download Report")}
-              className="px-3 py-2 bg-teal-800 text-teal-100 border border-teal-700 hover:bg-teal-700 text-xs font-bold rounded-xl transition-all"
-              title="Download Report"
-            >
-              <Download className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -508,12 +545,26 @@ export const CouncillorDashboard: React.FC<CouncillorDashboardProps> = ({ kpis, 
                   </div>
                   <div className="flex items-center gap-2 sm:self-center font-semibold">
                     <span className="text-[10px] text-slate-400 font-mono">{esc.duration}</span>
-                    <button 
-                      onClick={() => onActionTrigger(`SLA Force Dispatch: ${esc.id}`)}
-                      className="px-2.5 py-1 bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-rose-100 transition-colors"
-                    >
-                      Force Dispatch
-                    </button>
+                    {esc.status === 'dispatched' ? (
+                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-wider rounded-lg flex items-center gap-1">
+                        <Check className="h-3 w-3 animate-scale-in" /> Active Order
+                      </span>
+                    ) : (
+                      <button 
+                        onClick={() => {
+                          setActiveDispatchEscalation(esc);
+                          setSelectedDispatchCrew(
+                            esc.title.toLowerCase().includes('sewer') 
+                              ? 'Emergency Sewer Jetting Unit B' 
+                              : 'Water Treatment Engineering Wing'
+                          );
+                          setSpecialInstructions(`Direct Ward 42 Councillor authority override. Dispatch immediate field deployment to ${esc.sector} to resolve ${esc.title} within 2 hours.`);
+                        }}
+                        className="px-2.5 py-1 bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-rose-100 transition-colors cursor-pointer"
+                      >
+                        Force Dispatch
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -560,14 +611,357 @@ export const CouncillorDashboard: React.FC<CouncillorDashboardProps> = ({ kpis, 
           </div>
 
           <button 
-            onClick={() => onActionTrigger("Publish Feedback Analytics")}
-            className="w-full mt-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors text-center"
+            onClick={() => setIsCommentsInboxOpen(true)}
+            className="w-full mt-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors text-center cursor-pointer"
           >
             Review Citizen Comments Inbox
           </button>
         </div>
 
       </div>
+
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-4 right-4 z-50 p-4 bg-emerald-600 text-white rounded-2xl shadow-xl flex items-center gap-2 border border-emerald-500 font-sans text-xs font-bold animate-scale-in">
+          <Check className="h-4 w-4 text-white shrink-0" />
+          <span>{toastMessage}</span>
+          <button onClick={() => setToastMessage(null)} className="ml-2 text-white/80 hover:text-white font-black cursor-pointer px-1">✕</button>
+        </div>
+      )}
+
+      {/* Force Dispatch Dialog Modal */}
+      <AnimatePresence>
+        {activeDispatchEscalation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm shadow-xl"
+              onClick={() => {
+                if (!isDispatching) setActiveDispatchEscalation(null);
+              }}
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative bg-white w-full max-w-md rounded-3xl md3-shadow-lg p-6 border border-slate-200 text-left flex flex-col gap-5 z-10 font-sans"
+            >
+              <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-10 w-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+                    <ShieldAlert className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-sm font-black text-slate-900 tracking-tight leading-none">
+                      Magistracy Force Dispatch Order
+                    </h3>
+                    <p className="text-[10px] text-rose-600 font-mono uppercase tracking-wider mt-1">
+                      SLA Override Portal • {activeDispatchEscalation.id}
+                    </p>
+                  </div>
+                </div>
+                {!isDispatching && (
+                  <button 
+                    onClick={() => setActiveDispatchEscalation(null)}
+                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {isDispatching ? (
+                <div className="py-8 flex flex-col items-center justify-center gap-4 text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-rose-600" />
+                  <div className="space-y-1.5">
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider font-mono">
+                      Authorizing Emergency Order
+                    </h4>
+                    <p className="text-xs text-slate-500 max-w-xs font-semibold leading-relaxed">
+                      {dispatchStep === 0 && "Connecting with municipal response center..."}
+                      {dispatchStep === 1 && "Bypassing standard SLA queue barriers..."}
+                      {dispatchStep === 2 && "Transmitting coordinates to emergency response crew..."}
+                      {dispatchStep === 3 && "Sovereign dispatch order active!"}
+                    </p>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
+                    <div 
+                      className="bg-rose-600 h-full transition-all duration-1000" 
+                      style={{ width: `${(dispatchStep / 3) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ) : dispatchSuccess ? (
+                <div className="py-8 flex flex-col items-center justify-center gap-4 text-center">
+                  <div className="h-12 w-12 rounded-full bg-emerald-50 border border-emerald-150 flex items-center justify-center text-emerald-600 animate-scale-in">
+                    <Check className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-slate-900">Dispatch Order Confirmed</h4>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Order successfully processed. Crew is in transit.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-slate-50 rounded-2xl p-4 border border-slate-150 text-xs text-slate-700 leading-relaxed space-y-2">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase font-mono block">Target Incident</span>
+                      <strong className="text-slate-900 text-xs font-bold block mt-0.5">{activeDispatchEscalation.title}</strong>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-200/60 pt-2 text-[11px]">
+                      <span>Sector: <strong>{activeDispatchEscalation.sector}</strong></span>
+                      <span className="text-rose-600 font-bold font-mono uppercase bg-rose-50 px-1.5 rounded">{activeDispatchEscalation.priority} Priority</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wider block">
+                        Select Emergency Dispatch Crew
+                      </label>
+                      <select
+                        value={selectedDispatchCrew}
+                        onChange={(e) => setSelectedDispatchCrew(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 hover:border-rose-500 py-2 px-3 text-xs font-bold text-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500 cursor-pointer transition-all"
+                      >
+                        <option value="Emergency Sewer Jetting Unit B">Emergency Sewer Jetting Unit B (Sanitation)</option>
+                        <option value="Water Treatment Engineering Wing">Water Treatment Engineering Wing (Water)</option>
+                        <option value="Rapid Drainage Clearing Squad 3">Rapid Drainage Clearing Squad 3 (Drainage)</option>
+                        <option value="PWD Roads Obstruction Clearance Group">PWD Roads Obstruction Clearance Group (Roads)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wider block">
+                        Dispatch Urgency &amp; Mandate
+                      </label>
+                      <select
+                        value={dispatchPriority}
+                        onChange={(e) => setDispatchPriority(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 hover:border-rose-500 py-2 px-3 text-xs font-bold text-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500 cursor-pointer transition-all"
+                      >
+                        <option value="Emergency Override">Emergency Override (Bypass Normal SLA)</option>
+                        <option value="Immediate Action">Immediate Action (Required in 2 hours)</option>
+                        <option value="Priority Resolution">Priority Resolution (Required in 6 hours)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold font-mono text-slate-400 uppercase tracking-wider block">
+                        Special Directives / Instructions
+                      </label>
+                      <textarea
+                        value={specialInstructions}
+                        onChange={(e) => setSpecialInstructions(e.target.value)}
+                        rows={3}
+                        className="w-full p-3 bg-slate-50 border border-slate-200 hover:border-rose-500 text-xs text-slate-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-rose-500 transition-all font-semibold"
+                        placeholder="Enter direct instructions to dispatch crew..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2.5 pt-2">
+                    <button
+                      onClick={() => setActiveDispatchEscalation(null)}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all cursor-pointer text-center"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsDispatching(true);
+                        setDispatchStep(0);
+                      }}
+                      className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-600/10 hover:shadow-rose-600/20 transition-all cursor-pointer text-center"
+                    >
+                      Authorize Dispatch
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Citizen Comments Inbox Dialog Modal */}
+      <AnimatePresence>
+        {isCommentsInboxOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm shadow-xl"
+              onClick={() => setIsCommentsInboxOpen(false)}
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative bg-white w-full max-w-2xl rounded-3xl md3-shadow-lg p-6 border border-slate-200 text-left flex flex-col gap-4 z-10 font-sans max-h-[85vh] overflow-hidden"
+            >
+              <div className="flex items-start justify-between border-b border-slate-150 pb-3.5 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-10 w-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                    <MessageSquare className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-sm font-black text-slate-900 tracking-tight leading-none">
+                      Ward 42 Resident Comments Inbox
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-mono uppercase tracking-wider mt-1.5">
+                      Live Feedback &amp; Citizen Reviews Ledger
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsCommentsInboxOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Comments List */}
+              <div className="flex-grow overflow-y-auto pr-1 space-y-3.5 max-h-[50vh]">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="p-4 bg-slate-50 border border-slate-150 rounded-2xl flex flex-col gap-3 relative hover:border-slate-300 transition-all">
+                    
+                    {/* Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-7 w-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                          {comment.citizen.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-800 leading-none">{comment.citizen}</h4>
+                          <span className="text-[10px] text-slate-400 font-mono mt-1 block">{comment.date} • {comment.category}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {/* Rating Stars */}
+                        <div className="flex items-center gap-0.5">
+                          {Array.from({ length: 5 }).map((_, idx) => (
+                            <Star 
+                              key={idx} 
+                              className={`h-3 w-3 ${idx < comment.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} 
+                            />
+                          ))}
+                        </div>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase font-mono border ${
+                          comment.status === 'replied' ? 'bg-teal-50 text-teal-700 border-teal-150' :
+                          comment.status === 'converted' ? 'bg-indigo-50 text-indigo-700 border-indigo-150' :
+                          comment.status === 'acknowledged' ? 'bg-sky-50 text-sky-700 border-sky-150' :
+                          'bg-amber-50 text-amber-700 border-amber-150'
+                        }`}>
+                          {comment.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                      &ldquo;{comment.comment}&rdquo;
+                    </p>
+
+                    {/* Replies */}
+                    {comment.replied && (
+                      <div className="p-3 bg-white border border-slate-100 rounded-xl text-xs space-y-1 mt-1 font-sans">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-teal-700 uppercase tracking-wider font-mono">
+                          <span>Reply from Ward 42 Councillor Office:</span>
+                          <span className="text-slate-400">Just now</span>
+                        </div>
+                        <p className="text-slate-600 font-semibold">{comment.replyText}</p>
+                      </div>
+                    )}
+
+                    {/* Actions Row */}
+                    <div className="flex items-center justify-between border-t border-slate-150 pt-3 mt-1 shrink-0">
+                      <div className="flex items-center gap-2">
+                        {comment.status !== 'acknowledged' && comment.status !== 'replied' && comment.status !== 'converted' && (
+                          <button 
+                            onClick={() => {
+                              setComments(prev => prev.map(c => c.id === comment.id ? { ...c, status: 'acknowledged' } : c));
+                              setToastMessage("Citizen comment acknowledged!");
+                            }}
+                            className="px-2.5 py-1 text-[10px] font-bold bg-white hover:bg-sky-50 text-sky-700 border border-slate-200 hover:border-sky-200 rounded-lg transition-colors cursor-pointer"
+                          >
+                            Acknowledge
+                          </button>
+                        )}
+                        {comment.status !== 'converted' && (
+                          <button 
+                            onClick={() => {
+                              setComments(prev => prev.map(c => c.id === comment.id ? { ...c, status: 'converted' } : c));
+                              setToastMessage(`Comment converted to formal ${comment.category} department ticket!`);
+                            }}
+                            className="px-2.5 py-1 text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg transition-colors cursor-pointer"
+                          >
+                            Convert to Ticket
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {activeReplyCommentId === comment.id ? (
+                          <div className="flex gap-2 w-full md:w-64">
+                            <input 
+                              type="text"
+                              value={localReplyText}
+                              onChange={(e) => setLocalReplyText(e.target.value)}
+                              placeholder="Type reply..."
+                              className="bg-white border border-slate-200 py-1 px-2.5 text-xs font-semibold rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 w-full"
+                            />
+                            <button 
+                              onClick={() => {
+                                if (localReplyText.trim()) {
+                                  setComments(prev => prev.map(c => c.id === comment.id ? { ...c, replied: true, replyText: localReplyText, status: 'replied' } : c));
+                                  setActiveReplyCommentId(null);
+                                  setLocalReplyText('');
+                                  setToastMessage("Reply successfully posted to resident feedback portal!");
+                                }
+                              }}
+                              className="p-1 px-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                            >
+                              Post
+                            </button>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => {
+                              setActiveReplyCommentId(comment.id);
+                              setLocalReplyText(`Dear resident, thank you for your feedback regarding the ${comment.category.toLowerCase()}. We have dispatched a field inspection team to analyze this issue immediately.`);
+                            }}
+                            className="px-2.5 py-1 text-[10px] font-bold bg-white hover:bg-teal-50 text-teal-700 border border-slate-200 hover:border-teal-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                          >
+                            <MessageSquare className="h-3 w-3" /> Reply
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+
+              {/* Close Button */}
+              <button 
+                onClick={() => setIsCommentsInboxOpen(false)}
+                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow cursor-pointer transition-all text-center mt-2 shrink-0"
+              >
+                Dismiss Inbox
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <EscalationDialog isOpen={isEscalateOpen} onClose={() => setIsEscalateOpen(false)} />
 

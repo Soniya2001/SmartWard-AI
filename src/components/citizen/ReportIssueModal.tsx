@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
   Upload, 
@@ -11,7 +11,11 @@ import {
   MapPin, 
   Info,
   Loader2,
-  ListTodo
+  ListTodo,
+  Volume2,
+  VolumeX,
+  Languages,
+  RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ComplaintCategory, ComplaintPriority, ComplaintStatus } from '../../types';
@@ -50,6 +54,198 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
   const [submitStepMessage, setSubmitStepMessage] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // AI Analysis States
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // Voice & Translation States
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [originalDescription, setOriginalDescription] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
+  const [selectedLang, setSelectedLang] = useState('');
+
+  const synthRef = useRef<SpeechSynthesis | null>(typeof window !== 'undefined' ? window.speechSynthesis : null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Cleanup speech on unmount
+  useEffect(() => {
+    return () => {
+      if (synthRef.current) {
+        synthRef.current.cancel();
+      }
+    };
+  }, []);
+
+  const handleSpeak = () => {
+    if (!synthRef.current) return;
+
+    if (isSpeaking) {
+      synthRef.current.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    if (!description) return;
+
+    const utterance = new SpeechSynthesisUtterance(description);
+    utteranceRef.current = utterance;
+
+    // Language detection heuristics
+    const containsTamil = /[\u0B80-\u0BFF]/.test(description);
+    const containsHindi = /[\u0900-\u097F]/.test(description);
+    const containsKannada = /[\u0C80-\u0CFF]/.test(description);
+    const containsMalayalam = /[\u0D00-\u0D7F]/.test(description);
+
+    if (containsTamil) {
+      utterance.lang = 'ta-IN';
+    } else if (containsHindi) {
+      utterance.lang = 'hi-IN';
+    } else if (containsKannada) {
+      utterance.lang = 'kn-IN';
+    } else if (containsMalayalam) {
+      utterance.lang = 'ml-IN';
+    } else {
+      utterance.lang = 'en-US';
+    }
+
+    // Try to find matching voice
+    if (synthRef.current.getVoices) {
+      const voices = synthRef.current.getVoices();
+      const matchingVoice = voices.find(v => v.lang.startsWith(utterance.lang));
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
+      }
+    }
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+    };
+
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+    };
+
+    setIsSpeaking(true);
+    synthRef.current.speak(utterance);
+  };
+
+  const handleTranslate = async (targetLang: string, targetLangName: string) => {
+    if (!description) return;
+
+    // Store original text if not already saved
+    if (!originalDescription) {
+      setOriginalDescription(description);
+    }
+
+    setIsTranslating(true);
+    setTranslationError(null);
+    setSelectedLang(targetLang);
+
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: description,
+          targetLanguage: targetLangName,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to translate description.');
+      }
+
+      const data = await response.json();
+      if (data.translatedText) {
+        setDescription(data.translatedText);
+      }
+    } catch (err: any) {
+      console.error("Translation error:", err);
+      setTranslationError(err.message || 'Failed to translate. Please try again.');
+      setSelectedLang('');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleRevertDescription = () => {
+    if (originalDescription) {
+      setDescription(originalDescription);
+      setOriginalDescription('');
+      setSelectedLang('');
+    }
+  };
+
+  const handleAIAnalyzeImage = async () => {
+    if (!photoPreview) return;
+    setIsAnalyzingImage(true);
+    setAiError(null);
+
+    try {
+      const response = await fetch('/api/describe-issue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: photoPreview,
+          category: category,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze the photo.');
+      }
+
+      const data = await response.json();
+
+      // Update fields based on AI result
+      if (data.title) {
+        setIssue(data.title);
+      }
+      if (data.description) {
+        setDescription(data.description);
+      }
+      if (data.suggestedCategory) {
+        const mappedCat = mapCategory(data.suggestedCategory);
+        setCategory(mappedCat);
+      }
+      if (data.severityIndex) {
+        const mappedPri = mapPriority(data.severityIndex);
+        setPriority(mappedPri);
+      }
+
+    } catch (err: any) {
+      console.error("AI photo analysis error:", err);
+      setAiError(err.message || 'Unable to connect to AI engine. Please enter details manually.');
+    } finally {
+      setIsAnalyzingImage(false);
+    }
+  };
+
+  const mapCategory = (aiCat: string): ComplaintCategory => {
+    const catLower = aiCat.toLowerCase();
+    if (catLower.includes('road') || catLower.includes('pothole')) return 'Road';
+    if (catLower.includes('water') || catLower.includes('leak')) return 'Water';
+    if (catLower.includes('garbage') || catLower.includes('solid waste') || catLower.includes('trash') || catLower.includes('waste')) return 'Garbage';
+    if (catLower.includes('streetlight') || catLower.includes('electrical') || catLower.includes('light')) return 'Streetlight';
+    if (catLower.includes('drainage') || catLower.includes('sewage') || catLower.includes('overflow') || catLower.includes('blockage')) return 'Drainage';
+    return 'Others';
+  };
+
+  const mapPriority = (aiSev: string): ComplaintPriority => {
+    const sevLower = aiSev.toLowerCase();
+    if (sevLower.includes('low') || sevLower.includes('routine')) return 'Low';
+    if (sevLower.includes('high') || sevLower.includes('urgent') || sevLower.includes('dispatch') || sevLower.includes('operation')) return 'High';
+    if (sevLower.includes('critical') || sevLower.includes('hazard') || sevLower.includes('immediate')) return 'Critical';
+    return 'Medium';
+  };
+
   // Reset Form
   const resetForm = () => {
     setIssue('');
@@ -62,6 +258,18 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
     setSubmitSuccess(false);
     setSubmitStepMessage('');
     setErrors({});
+    setIsAnalyzingImage(false);
+    setAiError(null);
+    
+    // Reset accessibility voice & translation states
+    setIsSpeaking(false);
+    if (synthRef.current) {
+      synthRef.current.cancel();
+    }
+    setOriginalDescription('');
+    setIsTranslating(false);
+    setTranslationError(null);
+    setSelectedLang('');
   };
 
   // Trigger Local Choose File
@@ -335,8 +543,89 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
                     placeholder="Describe what happened and mention nearby landmarks if possible."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className={`w-full px-4 py-2.5 text-sm bg-slate-50 border ${errors.description ? 'border-danger focus:ring-danger/20' : 'border-slate-300 focus:ring-gov-blue/20 focus:border-gov-blue'} rounded-xl focus:outline-none focus:ring-2 transition-all font-semibold resize-none`}
+                    className={`w-full px-4 py-2.5 text-sm bg-slate-50 border ${errors.description ? 'border-danger focus:ring-danger/20' : 'border-slate-300 focus:ring-gov-blue/20 focus:border-gov-blue'} rounded-t-xl focus:outline-none focus:ring-2 transition-all font-semibold resize-none`}
                   />
+
+                  {/* Accessibility Speak and Translation Tray */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-100 border border-t-0 border-slate-300 rounded-b-xl -mt-1.5 text-xs text-slate-600 font-semibold select-none">
+                    {/* Speech / Read Aloud */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleSpeak}
+                        disabled={!description}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                          isSpeaking 
+                            ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-gov-blue disabled:opacity-40 disabled:cursor-not-allowed'
+                        }`}
+                        title={isSpeaking ? "Stop Voice Readout" : "Listen to description (Text-to-Speech)"}
+                      >
+                        {isSpeaking ? (
+                          <>
+                            <VolumeX className="h-3.5 w-3.5 animate-pulse text-red-500" />
+                            <span>Stop Voice</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="h-3.5 w-3.5 text-slate-500" />
+                            <span>Read Aloud 🔊</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Multilingual Translation */}
+                    <div className="flex items-center gap-2">
+                      {isTranslating ? (
+                        <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-gov-blue" />
+                          Translating...
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Languages className="h-3.5 w-3.5 text-slate-400" />
+                          <select
+                            value={selectedLang}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === 'ta') handleTranslate('ta', 'Tamil');
+                              else if (val === 'hi') handleTranslate('hi', 'Hindi');
+                              else if (val === 'kn') handleTranslate('kn', 'Kannada');
+                              else if (val === 'ml') handleTranslate('ml', 'Malayalam');
+                            }}
+                            disabled={!description || isTranslating}
+                            className="px-2 py-1 bg-white border border-slate-200 rounded-md text-[11px] text-slate-700 font-bold hover:bg-slate-50 hover:text-gov-blue focus:outline-none focus:border-gov-blue/50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                          >
+                            <option value="">Translate with AI...</option>
+                            <option value="ta">தமிழ் (Tamil)</option>
+                            <option value="hi">हिन्दी (Hindi)</option>
+                            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                            <option value="ml">മലയാളം (Malayalam)</option>
+                          </select>
+
+                          {originalDescription && (
+                            <button
+                              type="button"
+                              onClick={handleRevertDescription}
+                              className="px-2 py-1 bg-slate-200 hover:bg-slate-300 border border-slate-300 rounded-md text-[11px] text-slate-700 flex items-center gap-1 cursor-pointer transition-all font-bold"
+                              title="Revert to original text"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              <span>Original</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {translationError && (
+                    <p className="text-[10px] text-danger font-bold flex items-center gap-1 mt-1">
+                      <AlertCircle className="h-3 w-3 shrink-0" /> {translationError}
+                    </p>
+                  )}
+
                   {errors.description && (
                     <p className="text-[10px] text-danger font-bold flex items-center gap-1 mt-1">
                       <AlertCircle className="h-3 w-3 shrink-0" /> {errors.description}
@@ -393,6 +682,37 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
                       className="hidden"
                     />
                   </div>
+
+                  {photoPreview && (
+                    <div className="pt-1.5 space-y-1.5">
+                      <button
+                        type="button"
+                        disabled={isAnalyzingImage}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAIAnalyzeImage();
+                        }}
+                        className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-ai-purple to-gov-blue hover:from-ai-purple-dark hover:to-gov-blue-dark disabled:from-slate-400 disabled:to-slate-400 disabled:cursor-not-allowed shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      >
+                        {isAnalyzingImage ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Analyzing with SmartWard AI...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 text-amber-200" />
+                            Describe Issue & Auto-Fill Form with AI
+                          </>
+                        )}
+                      </button>
+                      {aiError && (
+                        <p className="text-[10px] text-danger font-bold flex items-center gap-1.5 px-1">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {aiError}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* SLA alert block */}

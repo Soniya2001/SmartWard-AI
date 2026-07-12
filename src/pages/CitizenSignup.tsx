@@ -91,9 +91,20 @@ const LANGUAGES = [
 ];
 
 export const CitizenSignup: React.FC = () => {
-  const { register } = useAuth();
+  const { user, register } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'authority') {
+        navigate('/authority/dashboard', { replace: true });
+      } else {
+        navigate('/citizen/dashboard', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   // Form Fields
   const [fullName, setFullName] = useState('');

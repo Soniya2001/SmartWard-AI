@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Shield, Sparkles, Mail, Lock, User, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const CitizenLogin: React.FC = () => {
-  const { login, register, loading: authLoading } = useAuth();
+  const { user, login, register, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'authority') {
+        navigate('/authority/dashboard', { replace: true });
+      } else {
+        navigate('/citizen/dashboard', { replace: true });
+      }
+    }
+  }, [user, navigate]);
 
   // Mode state: 'login' or 'register'
   const [mode, setMode] = useState<'login' | 'register'>('login');

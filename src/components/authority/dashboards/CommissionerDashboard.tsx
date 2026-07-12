@@ -8,7 +8,7 @@ import {
   Building2, Landmark, DollarSign, Users, Award, FileText, 
   MapPin, CheckCircle2, AlertCircle, RefreshCw, Star, 
   ArrowUpRight, Sparkles, Download, Layers, Calendar,
-  Truck, ShieldAlert, Sliders, Map
+  Truck, ShieldAlert, Sliders, Map, X, Check, Loader2, Plus, Navigation
 } from 'lucide-react';
 import { useAuthority } from '../../../contexts/AuthorityContext';
 
@@ -21,20 +21,119 @@ interface CommissionerDashboardProps {
 export const CommissionerDashboard: React.FC<CommissionerDashboardProps> = ({ kpis, onActionTrigger, activeSubTab }) => {
   const { chartData } = useAuthority();
   const [selectedDept, setSelectedDept] = useState<string>('Sanitation & SWM');
-  const [allocatedTrucks, setAllocatedTrucks] = useState<{ [key: string]: number }>({
-    'Ward 1': 6,
-    'Ward 2': 4,
-    'Ward 3': 3,
-    'Ward 42': 8,
-    'Ward 12': 5
+  const [allocatedTrucks, setAllocatedTrucks] = useState<{ [key: string]: number }>(() => {
+    const saved = localStorage.getItem('smartward_allocated_trucks');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      'Ward 1': 6,
+      'Ward 2': 4,
+      'Ward 3': 3,
+      'Ward 42': 8,
+      'Ward 12': 5
+    };
   });
 
   const handleAdjustResource = (ward: string, delta: number) => {
     setAllocatedTrucks(prev => {
       const current = prev[ward] || 0;
       const next = Math.max(1, current + delta);
-      return { ...prev, [ward]: next };
+      const updated = { ...prev, [ward]: next };
+      localStorage.setItem('smartward_allocated_trucks', JSON.stringify(updated));
+      return updated;
     });
+  };
+
+  const [isAllocateModalOpen, setIsAllocateModalOpen] = useState(false);
+  const [isGpsModalOpen, setIsGpsModalOpen] = useState(false);
+
+  // Allocate Resource Form State
+  const [allocWard, setAllocWard] = useState<string>('Ward 3');
+  const [allocType, setAllocType] = useState<string>('Compactor Truck');
+  const [allocQty, setAllocQty] = useState<number>(1);
+  const [allocSuccess, setAllocSuccess] = useState<boolean>(false);
+  const [allocError, setAllocError] = useState<string>('');
+
+  // GPS Fleet State
+  const [gpsTrucks, setGpsTrucks] = useState<any[]>(() => {
+    const saved = localStorage.getItem('smartward_gps_trucks');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return [
+      { id: 'TN-58-Y-2810', ward: 'Ward 42', driver: 'M. Saravanan', status: 'En Route', load: 85, speed: 32, type: 'Compactor Truck' },
+      { id: 'TN-58-W-9812', ward: 'Ward 3', driver: 'K. Ganesan', status: 'Collecting', load: 45, speed: 12, type: 'Compactor Truck' },
+      { id: 'TN-58-Q-4156', ward: 'Ward 1', driver: 'S. Maruthu', status: 'Stationary', load: 92, speed: 0, type: 'Dewatering Rig' },
+      { id: 'TN-58-Z-0034', ward: 'Ward 12', driver: 'R. Rajesh', status: 'En Route', load: 15, speed: 40, type: 'Sewer Desilting' },
+      { id: 'TN-58-A-1122', ward: 'Ward 2', driver: 'P. Kumar', status: 'Collecting', load: 60, speed: 15, type: 'Vacuum Sweeper' }
+    ];
+  });
+
+  const [selectedTruckId, setSelectedTruckId] = useState<string | null>(null);
+  const [rerouteWard, setRerouteWard] = useState<string>('Ward 42');
+  const [gpsSuccess, setGpsSuccess] = useState<boolean>(false);
+
+  const handleDeployResources = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (allocQty <= 0) {
+      setAllocError('Please enter a valid quantity');
+      return;
+    }
+    
+    setAllocatedTrucks(prev => {
+      const current = prev[allocWard] || 0;
+      const updated = {
+        ...prev,
+        [allocWard]: current + allocQty
+      };
+      localStorage.setItem('smartward_allocated_trucks', JSON.stringify(updated));
+      return updated;
+    });
+
+    setAllocSuccess(true);
+    setAllocError('');
+
+    setTimeout(() => {
+      setAllocSuccess(false);
+      setIsAllocateModalOpen(false);
+    }, 1500);
+  };
+
+  const handleRerouteTruck = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTruckId) return;
+
+    const truck = gpsTrucks.find(t => t.id === selectedTruckId);
+    if (!truck) return;
+
+    const oldWard = truck.ward;
+    const updatedTrucks = gpsTrucks.map(t => {
+      if (t.id === selectedTruckId) {
+        return { ...t, ward: rerouteWard, status: 'Re-routing' };
+      }
+      return t;
+    });
+
+    setGpsTrucks(updatedTrucks);
+    localStorage.setItem('smartward_gps_trucks', JSON.stringify(updatedTrucks));
+
+    // Update allocatedTrucks state
+    setAllocatedTrucks(prev => {
+      const next = { ...prev };
+      if (oldWard && next[oldWard]) {
+        next[oldWard] = Math.max(0, next[oldWard] - 1);
+      }
+      next[rerouteWard] = (next[rerouteWard] || 0) + 1;
+      localStorage.setItem('smartward_allocated_trucks', JSON.stringify(next));
+      return next;
+    });
+
+    setGpsSuccess(true);
+    setTimeout(() => {
+      setGpsSuccess(false);
+      setSelectedTruckId(null);
+    }, 1500);
   };
 
   // Ward rankings across the Corporation
@@ -97,8 +196,13 @@ export const CommissionerDashboard: React.FC<CommissionerDashboardProps> = ({ kp
             </p>
           </div>
           <button 
-            onClick={() => onActionTrigger("Optimize Truck Allocation")}
-            className="shrink-0 z-10 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm"
+            onClick={() => {
+              setAllocWard('Ward 3');
+              setAllocType('Compactor Truck');
+              setAllocQty(2);
+              setIsAllocateModalOpen(true);
+            }}
+            className="shrink-0 z-10 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm cursor-pointer"
           >
             Optimize Truck Allocation
           </button>
@@ -260,14 +364,14 @@ export const CommissionerDashboard: React.FC<CommissionerDashboardProps> = ({ kp
           </div>
           <div className="flex gap-2">
             <button 
-              onClick={() => onActionTrigger("Allocate Resources")}
-              className="px-4 py-2 bg-white text-purple-950 text-xs font-bold rounded-xl shadow hover:bg-purple-50 transition-all flex items-center gap-1.5"
+              onClick={() => setIsAllocateModalOpen(true)}
+              className="px-4 py-2 bg-white text-purple-950 text-xs font-bold rounded-xl shadow hover:bg-purple-50 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Sliders className="h-3.5 w-3.5" /> Allocate Resources
             </button>
             <button 
-              onClick={() => onActionTrigger("GPS Truck Dispatch")}
-              className="px-4 py-2 bg-purple-800 text-white border border-purple-700 text-xs font-bold rounded-xl shadow hover:bg-purple-700 transition-all flex items-center gap-1.5"
+              onClick={() => setIsGpsModalOpen(true)}
+              className="px-4 py-2 bg-purple-800 text-white border border-purple-700 text-xs font-bold rounded-xl shadow hover:bg-purple-700 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Truck className="h-3.5 w-3.5" /> GPS Truck Dispatch
             </button>
@@ -459,6 +563,267 @@ export const CommissionerDashboard: React.FC<CommissionerDashboardProps> = ({ kp
           ))}
         </div>
       </div>
+
+      {/* ALLOCATE RESOURCES MODAL */}
+      {isAllocateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            onClick={() => setIsAllocateModalOpen(false)}
+          />
+          <div className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl p-6 border border-slate-100 z-10 text-left animate-scale-in">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <Sliders className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-display text-sm font-black text-slate-900">
+                    Allocate SWM & Municipal Resources
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold font-mono uppercase tracking-wider">
+                    Commissioner Administrative Command
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsAllocateModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {allocSuccess ? (
+              <div className="py-8 text-center space-y-3">
+                <div className="h-14 w-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-150 shadow-sm animate-bounce-slow">
+                  <Check className="h-7 w-7 text-emerald-500" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">Resources Deployed Successfully!</h4>
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
+                    Deployed {allocQty}x {allocType} to {allocWard}. Operational registries updated.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleDeployResources} className="space-y-4">
+                {allocError && (
+                  <div className="p-3 bg-red-50 border border-red-150 rounded-xl text-xs text-red-600 font-bold">
+                    ⚠️ {allocError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">Target Ward</label>
+                    <select 
+                      value={allocWard}
+                      onChange={(e) => setAllocWard(e.target.value)}
+                      className="w-full px-3 py-2.5 text-xs bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all font-bold text-slate-800"
+                    >
+                      {['Ward 1', 'Ward 2', 'Ward 3', 'Ward 12', 'Ward 38', 'Ward 39', 'Ward 40', 'Ward 41', 'Ward 42', 'Ward 43', 'Ward 44'].map((w) => (
+                        <option key={w} value={w}>{w}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">Resource / Equipment Type</label>
+                    <select 
+                      value={allocType}
+                      onChange={(e) => setAllocType(e.target.value)}
+                      className="w-full px-3 py-2.5 text-xs bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all font-bold text-slate-800"
+                    >
+                      {['Compactor Truck', 'Water Tanker', 'Sewer Desilting Machine', 'Vacuum Road Sweeper'].map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">Deployment Quantity</label>
+                  <input 
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={allocQty}
+                    onChange={(e) => setAllocQty(parseInt(e.target.value) || 1)}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all font-mono font-black text-slate-800"
+                  />
+                  <p className="text-[10px] text-slate-400 font-semibold mt-1">
+                    Note: Compactor Truck allocations will immediately affect the live fleet count on your central dashboard panel.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setIsAllocateModalOpen(false)}
+                    className="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold rounded-xl border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 py-2.5 bg-purple-700 hover:bg-purple-800 text-white text-xs font-black rounded-xl transition-colors shadow-sm cursor-pointer"
+                  >
+                    Deploy Resources
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* GPS TRUCK DISPATCH & LIVE ROUTING MODAL */}
+      {isGpsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            onClick={() => setIsGpsModalOpen(false)}
+          />
+          <div className="relative bg-white w-full max-w-2xl rounded-3xl shadow-2xl p-6 border border-slate-100 z-10 text-left flex flex-col max-h-[90vh] overflow-hidden animate-scale-in">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <Truck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-display text-sm font-black text-slate-900">
+                    SWM GPS Fleet Command &amp; Re-routing
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold font-mono uppercase tracking-wider">
+                    Live Dispatch Terminal
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsGpsModalOpen(false)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Content Container */}
+            <div className="overflow-y-auto space-y-4 flex-1 pr-1">
+              
+              <div className="p-3 bg-purple-50 rounded-xl border border-purple-100 text-[11px] text-purple-900 font-semibold leading-relaxed">
+                ℹ️ Select any active heavy vehicle compactor from the fleet below to broadcast emergency re-routing GPS coordinates. Re-routing will dynamically balance ward SWM resources.
+              </div>
+
+              {/* Trucks Grid */}
+              <div className="space-y-2.5">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">Active Heavy Fleet Registry</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {gpsTrucks.map((truck) => {
+                    const isSelected = selectedTruckId === truck.id;
+                    return (
+                      <div 
+                        key={truck.id}
+                        onClick={() => {
+                          setSelectedTruckId(truck.id);
+                          setRerouteWard(truck.ward);
+                        }}
+                        className={`p-3.5 rounded-2xl border transition-all text-left cursor-pointer flex flex-col justify-between h-32 ${
+                          isSelected 
+                            ? 'border-purple-600 bg-purple-50/40 shadow-sm' 
+                            : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-xs font-black font-mono text-slate-900">{truck.id}</span>
+                            <span className="text-[10px] text-slate-400 font-bold font-mono block mt-0.5">{truck.type}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full font-mono font-bold text-[9px] ${
+                            truck.status === 'Stationary' ? 'bg-amber-50 text-amber-600' :
+                            truck.status === 'Re-routing' ? 'bg-indigo-50 text-indigo-600' :
+                            'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            ● {truck.status}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1 pt-1">
+                          <div className="flex justify-between text-[10px] font-semibold text-slate-500">
+                            <span>Assigned: <strong className="text-slate-800 font-bold">{truck.ward}</strong></span>
+                            <span>Driver: <strong className="text-slate-800 font-bold">{truck.driver}</strong></span>
+                          </div>
+
+                          {/* Progress capacity */}
+                          <div className="space-y-0.5">
+                            <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                              <span>Load Factor</span>
+                              <span>{truck.load}%</span>
+                            </div>
+                            <div className="w-full h-1 bg-slate-250 rounded-full overflow-hidden">
+                              <div className="h-full bg-purple-600 rounded-full" style={{ width: `${truck.load}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Reroute Sub-Form if selected */}
+              {selectedTruckId && (
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 mt-4 space-y-3">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-purple-800 uppercase font-mono">
+                    <Navigation className="h-4 w-4 animate-pulse" /> Dispatch Re-routing Instructions for {selectedTruckId}
+                  </div>
+
+                  {gpsSuccess ? (
+                    <div className="p-3 bg-emerald-50 border border-emerald-150 rounded-xl text-xs text-emerald-800 font-bold flex items-center gap-2">
+                      <Check className="h-4 w-4 text-emerald-600" /> Reroute Command Dispatched Live over Telemetry! Fleet updated.
+                    </div>
+                  ) : (
+                    <form onSubmit={handleRerouteTruck} className="flex flex-col sm:flex-row items-end gap-3">
+                      <div className="flex-1 space-y-1 w-full text-left">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase font-mono">Select Target Ward Target</label>
+                        <select 
+                          value={rerouteWard}
+                          onChange={(e) => setRerouteWard(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-white border border-slate-250 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all font-bold text-slate-800"
+                        >
+                          {['Ward 1', 'Ward 2', 'Ward 3', 'Ward 12', 'Ward 38', 'Ward 39', 'Ward 40', 'Ward 41', 'Ward 42', 'Ward 43', 'Ward 44'].map((w) => (
+                            <option key={w} value={w}>{w}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <button 
+                        type="submit"
+                        className="py-2 px-5 bg-purple-700 hover:bg-purple-800 text-white text-xs font-black rounded-xl transition-all cursor-pointer whitespace-nowrap shadow-sm"
+                      >
+                        Transmit Route Command
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer */}
+            <div className="pt-4 border-t border-slate-100 flex justify-end gap-2 shrink-0">
+              <button 
+                onClick={() => setIsGpsModalOpen(false)}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow cursor-pointer transition-all"
+              >
+                Close Fleet Console
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
