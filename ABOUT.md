@@ -5,35 +5,30 @@
 The **SmartWard Civic Redressal Platform** is a high-performance, single-page full-stack administration application designed to modernize municipal grievance redressal, public transparency, and administrative workflow orchestration. Targeted specifically for municipal administrations in Tamil Nadu (centered around Madurai and Ward 42), it bridges the gap between grassroots citizen grievances and top-tier legislative and executive oversight.
 
 ```
-                                  ┌──────────────────────────┐
-                                  │      Public Portal       │
-                                  │  (Home, Directory, Map)  │
-                                  └────────────┬─────────────┘
-                                               │
-                                               ▼
-                                  ┌──────────────────────────┐
-                                  │      Citizen Portal      │
-                                  │  (File, Track, Chatbot)  │
-                                  └────────────┬─────────────┘
-                                               │
-                                               ▼
-                         ┌───────────────────────────────────────────┐
-                         │         Central Authority Console         │
-                         │ (Complaints, Analytics, Reports, Profile) │
-                         └─────────────────────┬─────────────────────┘
-                                               │
-      ┌──────────────────┬───────────────────┼───────────────────┬──────────────────┐
-      ▼                  ▼                   ▼                   ▼                  ▼
-┌───────────┐      ┌───────────┐       ┌───────────┐       ┌───────────┐      ┌───────────┐
-│    CM     │      │ Minister  │       │ Collector │       │  Comm.    │      │    MLA    │
-│ Dashboard │      │ Dashboard │       │ Dashboard │       │ Dashboard │      │ Dashboard │
-└───────────┘      └───────────┘       └───────────┘       └───────────┘      └───────────┘
-                                             │                   │
-                                             ▼                   ▼
-                                       ┌───────────┐       ┌───────────┐
-                                       │Councillor │       │  Officer  │
-                                       │ Dashboard │       │ Dashboard │
-                                       └───────────┘       └───────────┘
+                             ┌────────────────────────┐
+                             │     Public Portal      │
+                             │ Home • Directory • Map │
+                             └───────────┬────────────┘
+                                         │
+                     ┌───────────────────┴───────────────────┐
+                     ▼                                       ▼
+            ┌─────────────────┐                     ┌──────────────────┐
+            │ Citizen Portal  │                     │ Authority Portal │
+            │                 │                     │                  │
+            │ • Report Issue  │                     │ • Authority Con. │
+            │ • Track Compl.  │                     │ • Analytics      │
+            │ • Notifications │                     │ • Reports        │
+            │ • Chatbot       │                     │ • Notifications  │
+            │ • Profile       │                     │ • Profile        │
+            └─────────────────┘                     └────────┬─────────┘
+                                                             │
+       ┌───────────┬───────────┬───────────┬───────────┬─────┴─────┬───────────┬───────────┐
+       ▼           ▼           ▼           ▼           ▼           ▼           ▼           ▼
+ ┌───────────┐┌───────────┐┌───────────┐┌───────────┐┌───────────┐┌───────────┐┌───────────┐
+ │Department ││   Ward    ││    MLA    ││Commissio. ││ Collector ││ Minister  ││   Chief   │
+ │  Officer  ││Councillor ││ Dashboard ││ Dashboard ││ Dashboard ││ Dashboard ││ Minister  │
+ │ Dashboard ││ Dashboard ││           ││           ││           ││           ││ Dashboard │
+ └───────────┘└───────────┘└───────────┘└───────────┘└───────────┘└───────────┘└───────────┘
 ```
 
 ### Technical Stack
