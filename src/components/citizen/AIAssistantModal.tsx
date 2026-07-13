@@ -56,7 +56,7 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
 
       for (let i = 0; i < steps.length; i++) {
         setStepMessage(steps[i]);
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
 
       // Generate a formal, beautiful complaint draft based on category and raw text

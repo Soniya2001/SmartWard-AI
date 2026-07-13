@@ -29,6 +29,43 @@ interface ReportIssueModalProps {
   defaultCategory?: ComplaintCategory;
 }
 
+const compressImage = (dataUrl: string, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } else {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => {
+      resolve(dataUrl);
+    };
+    img.src = dataUrl;
+  });
+};
+
 export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
   isOpen,
   onClose,
@@ -186,14 +223,17 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
     setAiError(null);
 
     try {
+      // Compress the image before uploading to speed up loading significantly
+      const compressed = await compressImage(photoPreview);
       const response = await fetch('/api/describe-issue', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          image: photoPreview,
+          image: compressed,
           category: category,
+          fileName: photo?.name || '',
         }),
       });
 
@@ -333,7 +373,7 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
 
       for (let i = 0; i < steps.length; i++) {
         setSubmitStepMessage(steps[i]);
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
 
       // Generate a beautiful new complaint item
@@ -354,6 +394,10 @@ export const ReportIssueModal: React.FC<ReportIssueModalProps> = ({
         date: formattedDate,
         ward: 'Ward 42',
         district: 'Madurai',
+        description: description.trim(),
+        images: photoPreview ? [photoPreview] : [],
+        citizenName: 'Soniya Baskaran',
+        contact: '+91 94421 82910',
         timeline: [
           {
             title: 'Complaint Logged Successfully',

@@ -3,11 +3,11 @@ import { useAuthority } from '../../contexts/AuthorityContext';
 import { 
   FileText, Search, Filter, ShieldAlert, CheckCircle2, Clock, 
   AlertCircle, ChevronRight, MessageSquare, ArrowUpDown, ArrowLeft,
-  Users, MapPin, Phone, Globe, Upload, Check, Sparkles, Eye, Award, Hammer, X
+  Users, MapPin, Phone, Globe, Upload, Check, Sparkles, Eye, Award, Hammer, X, Trash2, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EscalationDialog } from '../../components/authority/EscalationDialog';
-import { getDepartmentData, MockComplaint } from '../../utils/departmentData';
+import { getDepartmentData, MockComplaint, updateStoredComplaint, getStoredComplaints } from '../../utils/departmentData';
 
 const CM_ESCALATED_ISSUES: MockComplaint[] = [
   {
@@ -172,16 +172,30 @@ export const ComplaintsPage: React.FC = () => {
     before?: { url: string; time: string; officer: string };
     during?: { url: string; time: string; officer: string };
     after?: { url: string; time: string; officer: string };
-  }>>({
-    'WT-3301': {},
-    'WT-9842': {
-      before: {
-        url: 'https://images.unsplash.com/photo-1599740831119-07284763f831?auto=format&fit=crop&w=800&q=80',
-        time: '2026-07-10 11:30 AM',
-        officer: 'Er. Rajesh Kumar'
+  }>>(() => {
+    const saved = localStorage.getItem('authority_progress_images');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        // ignore
       }
     }
+    return {
+      'WT-3301': {},
+      'WT-9842': {
+        before: {
+          url: 'https://images.unsplash.com/photo-1599740831119-07284763f831?auto=format&fit=crop&w=800&q=80',
+          time: '2026-07-10 11:30 AM',
+          officer: 'Er. Rajesh Kumar'
+        }
+      }
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem('authority_progress_images', JSON.stringify(progressImages));
+  }, [progressImages]);
 
   // Timeline State
   const [customTimelines, setCustomTimelines] = useState<Record<string, string[]>>({
@@ -192,7 +206,11 @@ export const ComplaintsPage: React.FC = () => {
   const [escalationTargetComplaint, setEscalationTargetComplaint] = useState<any>(null);
   const [selectedTimelineComplaintId, setSelectedTimelineComplaintId] = useState<string | null>(null);
 
-  const selectedComplaint = complaints.find(c => c.id === selectedTicketId) || null;
+  const selectedComplaint = (() => {
+    if (!selectedTicketId) return null;
+    const all = getStoredComplaints();
+    return all.find(c => c.id === selectedTicketId) || complaints.find(c => c.id === selectedTicketId) || null;
+  })();
 
   const filtered = complaints.filter(c => {
     const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase()) || 
@@ -218,6 +236,13 @@ export const ComplaintsPage: React.FC = () => {
       return c;
     }));
 
+    // Update in localStorage
+    updateStoredComplaint(selectedTicketId, {
+      status: 'active',
+      assignedTo: selectedStaff,
+      severity: selectedPriority as any
+    });
+
     // Update timeline
     setCustomTimelines(prev => ({
       ...prev,
@@ -242,6 +267,9 @@ export const ComplaintsPage: React.FC = () => {
       return c;
     }));
 
+    // Update in localStorage
+    updateStoredComplaint(selectedTicketId, { status: newStatus });
+
     setCustomTimelines(prev => ({
       ...prev,
       [selectedTicketId]: [
@@ -262,6 +290,10 @@ export const ComplaintsPage: React.FC = () => {
       }
       return c;
     }));
+
+    // Update in localStorage
+    updateStoredComplaint(selectedTicketId, { status: 'active' });
+
     setCustomTimelines(prev => ({
       ...prev,
       [selectedTicketId]: [
@@ -280,6 +312,10 @@ export const ComplaintsPage: React.FC = () => {
       }
       return c;
     }));
+
+    // Update in localStorage
+    updateStoredComplaint(selectedTicketId, { status: 'resolved' });
+
     setCustomTimelines(prev => ({
       ...prev,
       [selectedTicketId]: [
@@ -294,15 +330,20 @@ export const ComplaintsPage: React.FC = () => {
     e.preventDefault();
     if (!replyText.trim() || !selectedTicketId) return;
 
-    setReplies(prev => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        text: replyText,
-        time: 'Just Now',
-        author: 'Er. Rajesh Kumar (Executive Engineer)'
-      }
-    ]);
+    const newReply = {
+      id: Math.random().toString(),
+      text: replyText,
+      time: 'Just Now',
+      author: 'Er. Rajesh Kumar (Executive Engineer)'
+    };
+
+    setReplies(prev => [...prev, newReply]);
+
+    // Update in localStorage
+    const currentReplies = selectedComplaint?.replies || [];
+    updateStoredComplaint(selectedTicketId, {
+      replies: [...currentReplies, newReply]
+    } as any);
 
     setCustomTimelines(prev => ({
       ...prev,
@@ -349,6 +390,93 @@ export const ComplaintsPage: React.FC = () => {
     }));
 
     alert(`${type.toUpperCase()} repair image uploaded successfully!`);
+  };
+
+  const handleManualUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'before' | 'during' | 'after') => {
+    if (!selectedTicketId) return;
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        setProgressImages(prev => {
+          const current = prev[selectedTicketId] || {};
+          return {
+            ...prev,
+            [selectedTicketId]: {
+              ...current,
+              [type]: {
+                url: dataUrl,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString(),
+                officer: 'Er. Rajesh Kumar'
+              }
+            }
+          };
+        });
+
+        setCustomTimelines(prev => ({
+          ...prev,
+          [selectedTicketId]: [
+            ...(prev[selectedTicketId] || []),
+            `Progress image (${type.toUpperCase()} repair) manually uploaded by Er. Rajesh Kumar.`
+          ]
+        }));
+
+        alert(`${type.toUpperCase()} repair image uploaded successfully!`);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveProgressImage = (type: 'before' | 'during' | 'after') => {
+    if (!selectedTicketId) return;
+    setProgressImages(prev => {
+      const current = { ...(prev[selectedTicketId] || {}) };
+      delete current[type];
+      return {
+        ...prev,
+        [selectedTicketId]: current
+      };
+    });
+
+    setCustomTimelines(prev => ({
+      ...prev,
+      [selectedTicketId]: [
+        ...(prev[selectedTicketId] || []),
+        `Progress image (${type.toUpperCase()} repair) removed by Er. Rajesh Kumar.`
+      ]
+    }));
+  };
+
+  const handleReopenComplaint = () => {
+    if (!selectedTicketId) return;
+    setComplaints(prev => prev.map(c => {
+      if (c.id === selectedTicketId) {
+        return { 
+          ...c, 
+          status: 'pending',
+          rating: undefined,
+          feedback: undefined
+        };
+      }
+      return c;
+    }));
+
+    // Update in localStorage
+    updateStoredComplaint(selectedTicketId, { 
+      status: 'pending',
+      rating: undefined,
+      feedback: undefined
+    });
+
+    setCustomTimelines(prev => ({
+      ...prev,
+      [selectedTicketId]: [
+        ...(prev[selectedTicketId] || []),
+        'Complaint has been REOPENED for further field investigation and repair.'
+      ]
+    }));
+    alert('Complaint status has been reset to PENDING and reopened successfully.');
   };
 
   return (
@@ -660,47 +788,58 @@ export const ComplaintsPage: React.FC = () => {
 
               {/* ACTION MENU STRIP */}
               <div className="flex flex-wrap items-center gap-2">
-                {selectedComplaint?.status === 'pending' && (
+                {selectedComplaint?.status === 'closed' ? (
                   <button 
-                    onClick={handleAcceptComplaint}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-lg text-slate-700 transition-colors flex items-center gap-1.5"
+                    onClick={handleReopenComplaint}
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-md cursor-pointer font-sans"
                   >
-                    Accept Complaint
+                    <ArrowUpDown className="h-3.5 w-3.5 animate-bounce" /> Reopen Complaint
                   </button>
-                )}
-                <button 
-                  onClick={() => setIsAssignDialogOpen(true)}
-                  className="px-3 py-1.5 bg-sky-950 hover:bg-sky-900 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
-                >
-                  <Users className="h-3.5 w-3.5" /> Assign Field Staff
-                </button>
-                <div className="relative">
-                  <button 
-                    onClick={() => setShowStatusMenu(!showStatusMenu)}
-                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
-                  >
-                    <span>Update Status ({selectedComplaint?.status})</span>
-                  </button>
-                  {showStatusMenu && (
-                    <div className="absolute right-0 mt-1 w-44 bg-white rounded-lg border border-slate-200 shadow-lg z-50 py-1 font-sans text-xs">
-                      {['pending', 'active', 'resolved', 'closed'].map((st) => (
-                        <button
-                          key={st}
-                          onClick={() => handleStatusChange(st as any)}
-                          className="w-full px-3 py-2 text-left hover:bg-slate-50 font-bold capitalize text-slate-700"
-                        >
-                          {st}
-                        </button>
-                      ))}
+                ) : (
+                  <>
+                    {selectedComplaint?.status === 'pending' && (
+                      <button 
+                        onClick={handleAcceptComplaint}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-xs font-bold rounded-lg text-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      >
+                        Accept Complaint
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => setIsAssignDialogOpen(true)}
+                      className="px-3 py-1.5 bg-sky-950 hover:bg-sky-900 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    >
+                      <Users className="h-3.5 w-3.5" /> Assign Field Staff
+                    </button>
+                    <div className="relative">
+                      <button 
+                        onClick={() => setShowStatusMenu(!showStatusMenu)}
+                        className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Update Status ({selectedComplaint?.status})</span>
+                      </button>
+                      {showStatusMenu && (
+                        <div className="absolute right-0 mt-1 w-44 bg-white rounded-lg border border-slate-200 shadow-lg z-50 py-1 font-sans text-xs">
+                          {['pending', 'active', 'resolved', 'closed'].map((st) => (
+                            <button
+                              key={st}
+                              onClick={() => handleStatusChange(st as any)}
+                              className="w-full px-3 py-2 text-left hover:bg-slate-50 font-bold capitalize text-slate-700 cursor-pointer"
+                            >
+                              {st}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <button 
-                  onClick={handleMarkAsCompleted}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Mark Completed
-                </button>
+                    <button 
+                      onClick={handleMarkAsCompleted}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Mark Completed
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -816,24 +955,82 @@ export const ComplaintsPage: React.FC = () => {
                     Citizen Uploaded Evidence
                   </h3>
                   <div className="flex flex-wrap gap-4">
-                    {selectedComplaint?.images.map((imgUrl, i) => (
-                      <div 
-                        key={i}
-                        onClick={() => setZoomedImage(imgUrl)}
-                        className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-lg overflow-hidden border border-slate-200 cursor-zoom-in hover:scale-105 transition-transform group"
-                      >
-                        <img 
-                          src={imgUrl} 
-                          alt="Citizen proof" 
-                          className="h-full w-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Eye className="h-5 w-5 text-white" />
+                    {selectedComplaint?.images && selectedComplaint.images.length > 0 ? (
+                      selectedComplaint.images.map((imgUrl, i) => (
+                        <div 
+                          key={i}
+                          onClick={() => setZoomedImage(imgUrl)}
+                          className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-lg overflow-hidden border border-slate-200 cursor-zoom-in hover:scale-105 transition-transform group"
+                        >
+                          <img 
+                            src={imgUrl} 
+                            alt="Citizen proof" 
+                            className="h-full w-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Eye className="h-5 w-5 text-white" />
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="w-full py-6 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl text-xs font-bold text-slate-500">
+                        No photographic evidence was uploaded by the citizen.
                       </div>
-                    ))}
+                    )}
                   </div>
+                </div>
+
+                {/* CITIZEN RATING & FEEDBACK */}
+                <div className="bg-white rounded-xl border border-slate-200/80 p-5 space-y-3.5 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Star className="h-4.5 w-4.5 text-amber-500 fill-amber-500" />
+                      Citizen Satisfaction Rating
+                    </h3>
+                    <span className="text-[10px] font-mono font-bold bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded border border-amber-100">
+                      Sovereign Feedback Loop
+                    </span>
+                  </div>
+
+                  {selectedComplaint?.rating ? (
+                    <div className="space-y-3 font-sans">
+                      <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={`h-5 w-5 ${
+                                star <= (selectedComplaint.rating || 0)
+                                  ? 'text-amber-500 fill-amber-500' 
+                                  : 'text-slate-300'
+                              }`} 
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm font-extrabold text-slate-800">
+                          {selectedComplaint.rating} out of 5 Stars
+                        </span>
+                      </div>
+                      
+                      {selectedComplaint.feedback && (
+                        <div className="bg-amber-50/50 border border-amber-100 p-3.5 rounded-xl">
+                          <span className="text-[10px] font-bold text-amber-800 uppercase block tracking-wider mb-1">Citizen Feedback Comments</span>
+                          <p className="text-xs text-amber-950 font-medium leading-relaxed italic">
+                            "{selectedComplaint.feedback}"
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-5 bg-slate-50/50 border border-dashed border-slate-200 rounded-xl">
+                      <p className="text-xs font-bold text-slate-500">
+                        {selectedComplaint?.status === 'resolved' 
+                          ? 'Grievance is completed/resolved. Awaiting resident rating & closure.' 
+                          : 'Rating and comments will be available once the grievance is completed and closed by the resident.'}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* 4. AUTHORITY IMAGE UPLOAD (BEFORE / DURING / AFTER) */}
@@ -857,26 +1054,43 @@ export const ComplaintsPage: React.FC = () => {
                     <div className="space-y-2">
                       <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">1. Before Repair</span>
                       {progressImages[selectedComplaint!.id]?.before ? (
-                        <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                        <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50 group">
                           <img 
                             src={progressImages[selectedComplaint!.id].before?.url} 
                             alt="Before repair" 
                             className="h-28 w-full object-cover cursor-zoom-in"
                             onClick={() => setZoomedImage(progressImages[selectedComplaint!.id].before?.url || null)}
                           />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProgressImage('before')}
+                            className="absolute top-1.5 right-1.5 p-1 bg-rose-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-700 shadow cursor-pointer"
+                            title="Remove image"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                           <div className="p-2 text-[9px] text-slate-500 font-semibold space-y-0.5">
                             <p>Time: {progressImages[selectedComplaint!.id].before?.time}</p>
                             <p>Officer: {progressImages[selectedComplaint!.id].before?.officer}</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="border border-dashed border-slate-200 rounded-lg p-4 h-36 flex flex-col items-center justify-center text-center bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                          <Upload className="h-6 w-6 text-slate-400 mb-2" />
+                        <div className="border border-dashed border-slate-200 rounded-lg p-4 h-36 flex flex-col items-center justify-center text-center bg-slate-50/50 hover:bg-slate-50 transition-colors relative">
+                          <Upload className="h-5 w-5 text-slate-400 mb-1.5" />
+                          <label className="text-[10px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded border border-sky-100 cursor-pointer transition-colors">
+                            Upload File
+                            <input 
+                              type="file" 
+                              accept="image/*"
+                              className="hidden" 
+                              onChange={(e) => handleManualUpload(e, 'before')} 
+                            />
+                          </label>
                           <button 
                             onClick={() => simulateProgressUpload('before')}
-                            className="text-[10px] font-bold text-sky-600 hover:underline"
+                            className="text-[9px] font-semibold text-slate-400 hover:text-slate-600 mt-2 hover:underline cursor-pointer"
                           >
-                            Simulate Before Photo
+                            or Simulate Photo
                           </button>
                         </div>
                       )}
@@ -886,26 +1100,43 @@ export const ComplaintsPage: React.FC = () => {
                     <div className="space-y-2">
                       <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">2. During Repair</span>
                       {progressImages[selectedComplaint!.id]?.during ? (
-                        <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                        <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50 group">
                           <img 
                             src={progressImages[selectedComplaint!.id].during?.url} 
                             alt="During repair" 
                             className="h-28 w-full object-cover cursor-zoom-in"
                             onClick={() => setZoomedImage(progressImages[selectedComplaint!.id].during?.url || null)}
                           />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProgressImage('during')}
+                            className="absolute top-1.5 right-1.5 p-1 bg-rose-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-700 shadow cursor-pointer"
+                            title="Remove image"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                           <div className="p-2 text-[9px] text-slate-500 font-semibold space-y-0.5">
                             <p>Time: {progressImages[selectedComplaint!.id].during?.time}</p>
                             <p>Officer: {progressImages[selectedComplaint!.id].during?.officer}</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="border border-dashed border-slate-200 rounded-lg p-4 h-36 flex flex-col items-center justify-center text-center bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                          <Upload className="h-6 w-6 text-slate-400 mb-2" />
+                        <div className="border border-dashed border-slate-200 rounded-lg p-4 h-36 flex flex-col items-center justify-center text-center bg-slate-50/50 hover:bg-slate-50 transition-colors relative">
+                          <Upload className="h-5 w-5 text-slate-400 mb-1.5" />
+                          <label className="text-[10px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded border border-sky-100 cursor-pointer transition-colors">
+                            Upload File
+                            <input 
+                              type="file" 
+                              accept="image/*"
+                              className="hidden" 
+                              onChange={(e) => handleManualUpload(e, 'during')} 
+                            />
+                          </label>
                           <button 
                             onClick={() => simulateProgressUpload('during')}
-                            className="text-[10px] font-bold text-sky-600 hover:underline"
+                            className="text-[9px] font-semibold text-slate-400 hover:text-slate-600 mt-2 hover:underline cursor-pointer"
                           >
-                            Simulate During Photo
+                            or Simulate Photo
                           </button>
                         </div>
                       )}
@@ -915,26 +1146,43 @@ export const ComplaintsPage: React.FC = () => {
                     <div className="space-y-2">
                       <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">3. After Repair</span>
                       {progressImages[selectedComplaint!.id]?.after ? (
-                        <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                        <div className="relative border border-slate-200 rounded-lg overflow-hidden bg-slate-50 group">
                           <img 
                             src={progressImages[selectedComplaint!.id].after?.url} 
                             alt="After repair" 
                             className="h-28 w-full object-cover cursor-zoom-in"
                             onClick={() => setZoomedImage(progressImages[selectedComplaint!.id].after?.url || null)}
                           />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveProgressImage('after')}
+                            className="absolute top-1.5 right-1.5 p-1 bg-rose-600 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-700 shadow cursor-pointer"
+                            title="Remove image"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                           <div className="p-2 text-[9px] text-slate-500 font-semibold space-y-0.5">
                             <p>Time: {progressImages[selectedComplaint!.id].after?.time}</p>
                             <p>Officer: {progressImages[selectedComplaint!.id].after?.officer}</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="border border-dashed border-slate-200 rounded-lg p-4 h-36 flex flex-col items-center justify-center text-center bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                          <Upload className="h-6 w-6 text-slate-400 mb-2" />
+                        <div className="border border-dashed border-slate-200 rounded-lg p-4 h-36 flex flex-col items-center justify-center text-center bg-slate-50/50 hover:bg-slate-50 transition-colors relative">
+                          <Upload className="h-5 w-5 text-slate-400 mb-1.5" />
+                          <label className="text-[10px] font-bold text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2.5 py-1 rounded border border-sky-100 cursor-pointer transition-colors">
+                            Upload File
+                            <input 
+                              type="file" 
+                              accept="image/*"
+                              className="hidden" 
+                              onChange={(e) => handleManualUpload(e, 'after')} 
+                            />
+                          </label>
                           <button 
                             onClick={() => simulateProgressUpload('after')}
-                            className="text-[10px] font-bold text-sky-600 hover:underline"
+                            className="text-[9px] font-semibold text-slate-400 hover:text-slate-600 mt-2 hover:underline cursor-pointer"
                           >
-                            Simulate After Photo
+                            or Simulate Photo
                           </button>
                         </div>
                       )}

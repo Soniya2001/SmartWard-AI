@@ -19,7 +19,8 @@ import {
   Award,
   PhoneCall,
   Flame,
-  Milestone
+  Milestone,
+  Star
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ComplaintStatus, ComplaintPriority, ComplaintCategory } from '../../types';
@@ -40,6 +41,13 @@ export interface DemoComplaint {
     time: string;
     done: boolean;
   }[];
+  replies?: { id: string; text: string; time: string; author: string }[];
+  rating?: number;
+  feedback?: string;
+  description?: string;
+  citizenName?: string;
+  contact?: string;
+  images?: string[];
 }
 
 // 1. ComplaintCard Component
@@ -186,9 +194,21 @@ export const ComplaintCard: React.FC<ComplaintCardProps> = ({
 // 2. ComplaintTimelineWidget Component
 interface TimelineWidgetProps {
   selectedComplaint: DemoComplaint | null;
+  onRateComplaint?: (id: string, rating: number, feedback: string) => void;
 }
 
-export const TimelineWidget: React.FC<TimelineWidgetProps> = ({ selectedComplaint }) => {
+export const TimelineWidget: React.FC<TimelineWidgetProps> = ({ 
+  selectedComplaint,
+  onRateComplaint
+}) => {
+  const [ratingValue, setRatingValue] = React.useState<number>(5);
+  const [commentValue, setCommentValue] = React.useState<string>('');
+
+  React.useEffect(() => {
+    setRatingValue(5);
+    setCommentValue('');
+  }, [selectedComplaint?.id]);
+
   if (!selectedComplaint) {
     return (
       <div className="bg-slate-50 border border-slate-200 border-dashed rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-3 h-full min-h-[300px]">
@@ -267,6 +287,84 @@ export const TimelineWidget: React.FC<TimelineWidgetProps> = ({ selectedComplain
             </div>
           ))}
         </div>
+
+        {/* Official Replies & Feedback */}
+        {selectedComplaint.replies && selectedComplaint.replies.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-slate-100 space-y-2.5">
+            <h5 className="text-[10px] font-mono font-black uppercase tracking-wider text-slate-500">Official Communication & Feedback</h5>
+            <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+              {selectedComplaint.replies.map((reply: any) => (
+                <div key={reply.id} className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-blue-800">{reply.author}</span>
+                    <span className="text-[9px] font-mono font-semibold text-blue-400">{reply.time}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-700 leading-relaxed font-medium">{reply.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Dynamic Ratings & Sign-Off Box */}
+        {(selectedComplaint.status === 'Resolved' || selectedComplaint.status === 'Closed') && !selectedComplaint.rating && (
+          <div className="mt-5 pt-4 border-t border-slate-100 space-y-3 bg-emerald-50/20 p-4 border border-emerald-100 rounded-2xl text-left">
+            <div className="flex items-center gap-2">
+              <Star className="h-4.5 w-4.5 text-emerald-600 fill-emerald-500 animate-bounce" />
+              <h5 className="text-xs font-black uppercase tracking-wider font-mono text-emerald-800">Rate Ward Resolution</h5>
+            </div>
+            <p className="text-[10px] text-slate-500 font-semibold leading-snug">
+              The ward field crew has completed the repairs. Please rate your satisfaction to close this grievance ticket.
+            </p>
+            <div className="flex items-center gap-1.5 py-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRatingValue(star)}
+                  className="p-1 focus:outline-none hover:scale-110 transition-transform cursor-pointer"
+                  type="button"
+                >
+                  <Star className={`h-6 w-6 ${star <= ratingValue ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={commentValue}
+              onChange={(e) => setCommentValue(e.target.value)}
+              placeholder="Provide optional satisfaction notes or comments for your ward representative..."
+              className="w-full text-[11px] font-medium p-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-600 min-h-[60px] bg-white text-slate-800"
+            />
+            <button
+              onClick={() => onRateComplaint && onRateComplaint(selectedComplaint.id, ratingValue, commentValue)}
+              className="w-full py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+            >
+              <CheckCircle2 className="h-4 w-4" /> Submit Rating & Close Ticket
+            </button>
+          </div>
+        )}
+
+        {/* Rated/Sign-Off Display */}
+        {selectedComplaint.rating !== undefined && (
+          <div className="mt-5 pt-4 border-t border-slate-100 space-y-2 bg-slate-50/50 p-4 border border-slate-200/50 rounded-2xl text-left">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                <h5 className="text-xs font-black uppercase tracking-wider font-mono text-slate-700">Resident Feedback Sign-Off</h5>
+              </div>
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={star} className={`h-3.5 w-3.5 ${star <= selectedComplaint.rating! ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
+                ))}
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed font-semibold italic">
+              "{selectedComplaint.feedback || "Grievance resolved successfully."}"
+            </p>
+            <div className="flex items-center gap-1.5 text-[9px] font-mono font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1 w-fit mt-1">
+              <CheckCircle2 className="h-3.5 w-3.5" /> VERIFIED COMPLETED & CLOSED
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl mt-6 text-left flex items-start gap-2 text-[10px] text-indigo-700 font-semibold leading-relaxed">

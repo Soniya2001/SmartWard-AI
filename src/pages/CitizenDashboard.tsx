@@ -55,6 +55,7 @@ import {
 import { ReportIssueModal } from '../components/citizen/ReportIssueModal';
 import { AIAssistantModal } from '../components/citizen/AIAssistantModal';
 import { ComplaintCategory } from '../types';
+import { getCitizenComplaints, getStoredComplaints, saveStoredComplaints, mapDemoToMock } from '../utils/departmentData';
 
 // INITIAL DEMO DATA
 const INITIAL_COMPLAINTS: DemoComplaint[] = [
@@ -214,9 +215,12 @@ export const CitizenDashboard: React.FC = () => {
   }, [user, navigate]);
 
   // Dashboard state variables
-  const [complaints, setComplaints] = useState<DemoComplaint[]>(INITIAL_COMPLAINTS);
+  const [complaints, setComplaints] = useState<DemoComplaint[]>(() => getCitizenComplaints());
   const [notifications, setNotifications] = useState<DemoNotification[]>(INITIAL_NOTIFICATIONS);
-  const [selectedComplaint, setSelectedComplaint] = useState<DemoComplaint | null>(INITIAL_COMPLAINTS[0]);
+  const [selectedComplaint, setSelectedComplaint] = useState<DemoComplaint | null>(() => {
+    const list = getCitizenComplaints();
+    return list.length > 0 ? list[0] : null;
+  });
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
 
@@ -224,6 +228,7 @@ export const CitizenDashboard: React.FC = () => {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
 
   // Form Pre-fills from AI drafts
   const [aiDraftText, setAiDraftText] = useState('');
@@ -270,10 +275,105 @@ export const CitizenDashboard: React.FC = () => {
     }
   }, [user]);
 
+  // Poll localStorage for new complaints, replies, or status changes from Authority
+  useEffect(() => {
+    const checkUpdates = () => {
+      const freshList = getCitizenComplaints();
+      
+      let hasChanges = false;
+      const newNotifications: DemoNotification[] = [];
+
+      freshList.forEach((freshItem) => {
+        const oldItem = complaints.find(c => c.id === freshItem.id);
+        if (!oldItem) {
+          return;
+        }
+
+        // 1. Status change check
+        if (oldItem.status !== freshItem.status) {
+          hasChanges = true;
+          let notifTitle = 'Status Updated';
+          let notifType: 'assigned' | 'reply' | 'resolved' | 'reminder' | 'system' = 'system';
+          
+          if (freshItem.status === 'In Progress') {
+            notifTitle = 'Field Team Dispatched';
+            notifType = 'assigned';
+          } else if (freshItem.status === 'Resolved') {
+            notifTitle = 'Resolution Completed';
+            notifType = 'resolved';
+          } else if (freshItem.status === 'Closed') {
+            notifTitle = 'Grievance Closed';
+            notifType = 'resolved';
+          }
+
+          newNotifications.push({
+            id: 'N_' + freshItem.id + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            title: notifTitle,
+            description: `Complaint #${freshItem.id} ("${freshItem.issue}") has been marked as ${freshItem.status}.`,
+            time: 'Just Now',
+            type: notifType
+          });
+        }
+
+        // 2. Replies count or content check
+        const oldReplies = oldItem.replies || [];
+        const freshReplies = freshItem.replies || [];
+        if (freshReplies.length > oldReplies.length) {
+          hasChanges = true;
+          const latestReply = freshReplies[freshReplies.length - 1];
+          newNotifications.push({
+            id: 'R_' + freshItem.id + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            title: `Official Feedback Received`,
+            description: `New message on #${freshItem.id}: "${latestReply.text}" - ${latestReply.author}`,
+            time: 'Just Now',
+            type: 'reply'
+          });
+        }
+      });
+
+      if (hasChanges || freshList.length !== complaints.length) {
+        setComplaints(freshList);
+        
+        // Update selected complaint if it is the one that changed
+        if (selectedComplaint) {
+          const updatedSelected = freshList.find(c => c.id === selectedComplaint.id);
+          if (updatedSelected) {
+            setSelectedComplaint(updatedSelected);
+          }
+        } else if (freshList.length > 0) {
+          setSelectedComplaint(freshList[0]);
+        }
+
+        if (newNotifications.length > 0) {
+          setNotifications(prev => [...newNotifications, ...prev]);
+        }
+      }
+    };
+
+    const interval = setInterval(checkUpdates, 2000);
+    window.addEventListener('focus', checkUpdates);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', checkUpdates);
+    };
+  }, [complaints, selectedComplaint]);
+
   // Handle adding a new complaint
   const handleAddComplaint = (newComplaint: DemoComplaint) => {
-    setComplaints((prev) => [newComplaint, ...prev]);
-    setSelectedComplaint(newComplaint); // Instantly highlight in the timeline
+    // Map DemoComplaint to MockComplaint and save to localStorage
+    const mock = mapDemoToMock(newComplaint);
+    const allStored = getStoredComplaints();
+    allStored.unshift(mock);
+    saveStoredComplaints(allStored);
+
+    // Refresh unified complaints state
+    const updatedComplaints = getCitizenComplaints();
+    setComplaints(updatedComplaints);
+    
+    // Find the added complaint in the newly mapped array to keep references happy
+    const added = updatedComplaints.find(c => c.id === newComplaint.id) || newComplaint;
+    setSelectedComplaint(added); // Instantly highlight in the timeline
 
     // Add a corresponding in-app alert notification
     const newNotif: DemoNotification = {
@@ -284,6 +384,43 @@ export const CitizenDashboard: React.FC = () => {
       type: 'assigned'
     };
     setNotifications((prev) => [newNotif, ...prev]);
+  };
+
+  // Handle rating & closing complaint
+  const handleRateComplaint = (id: string, rating: number, feedback: string) => {
+    const allStored = getStoredComplaints();
+    const updatedStored = allStored.map(c => {
+      if (c.id === id) {
+        return {
+          ...c,
+          status: 'closed' as const,
+          rating,
+          feedback
+        };
+      }
+      return c;
+    });
+    saveStoredComplaints(updatedStored);
+
+    // Refresh state
+    const updatedComplaints = getCitizenComplaints();
+    setComplaints(updatedComplaints);
+
+    // Update active selection
+    const updatedSelected = updatedComplaints.find(c => c.id === id);
+    if (updatedSelected) {
+      setSelectedComplaint(updatedSelected);
+    }
+
+    // Add completion sign-off notification
+    const signOffNotif: DemoNotification = {
+      id: 'SF_' + id + '_' + Date.now(),
+      title: 'Sign-Off Feedback Submitted',
+      description: `You gave #${id} a ${rating}-star rating. The ticket is officially resolved and archived.`,
+      time: 'Just Now',
+      type: 'resolved'
+    };
+    setNotifications(prev => [signOffNotif, ...prev]);
   };
 
   // Handle AI draft completion
@@ -327,10 +464,99 @@ export const CitizenDashboard: React.FC = () => {
             </div>
           </div>
           
-          {/* Quick link bar */}
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-slate-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>WARD-42 ENGINE ONLINE</span>
+          {/* Quick link bar & Notifications Bell */}
+          <div className="flex items-center gap-4 text-xs font-mono font-bold text-slate-400">
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>WARD-42 ENGINE ONLINE</span>
+            </div>
+
+            <div className="h-4 w-px bg-slate-800" />
+
+            {/* Notification Bell with Floating Panel */}
+            <div className="relative">
+              <button
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-all relative cursor-pointer flex items-center justify-center"
+                title="Notification Center"
+              >
+                <Bell className="h-5 w-5" />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4.5 w-4.5 bg-rose-500 text-[9px] font-black text-white rounded-full flex items-center justify-center animate-pulse">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {isNotifOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden text-slate-800 max-h-[400px] flex flex-col"
+                    >
+                      <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                        <span className="text-xs font-black uppercase tracking-wider font-mono text-slate-700">Official Dispatches</span>
+                        <span className="text-[10px] font-mono font-bold text-gov-blue bg-gov-blue/10 px-2 py-0.5 rounded-full">
+                          {notifications.length} dispatches
+                        </span>
+                      </div>
+
+                      <div className="overflow-y-auto flex-1 divide-y divide-slate-100 max-h-[300px]">
+                        {notifications.length === 0 ? (
+                          <div className="py-8 text-center flex flex-col items-center justify-center space-y-1">
+                            <span className="text-2xl">📭</span>
+                            <p className="text-xs text-slate-400 font-bold">No new dispatch logs.</p>
+                          </div>
+                        ) : (
+                          notifications.map((notif) => (
+                            <div key={notif.id} className="p-3 hover:bg-slate-50/80 transition-colors space-y-1 text-left relative group">
+                              <div className="flex items-start justify-between gap-2">
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider font-mono ${
+                                  notif.type === 'resolved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                                  notif.type === 'assigned' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                  notif.type === 'reply' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                                  'bg-slate-100 text-slate-700 border border-slate-200'
+                                }`}>
+                                  {notif.type}
+                                </span>
+                                <span className="text-[9px] font-mono text-slate-400">{notif.time}</span>
+                              </div>
+                              <h5 className="text-xs font-bold text-slate-800">{notif.title}</h5>
+                              <p className="text-[10px] text-slate-500 font-medium leading-relaxed">{notif.description}</p>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setNotifications(prev => prev.filter(n => n.id !== notif.id));
+                                }}
+                                className="absolute right-2 top-2 text-[9px] font-bold text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={() => {
+                            setNotifications([]);
+                            setIsNotifOpen(false);
+                          }}
+                          className="w-full py-2 bg-slate-50 hover:bg-slate-100 text-center text-[10px] font-bold font-mono text-gov-blue uppercase tracking-wider border-t border-slate-200 cursor-pointer"
+                        >
+                          Clear All Dispatches
+                        </button>
+                      )}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>
@@ -454,7 +680,10 @@ export const CitizenDashboard: React.FC = () => {
           <div className="lg:col-span-4 space-y-5">
             
             {/* Vertical timeline */}
-            <TimelineWidget selectedComplaint={selectedComplaint} />
+            <TimelineWidget 
+              selectedComplaint={selectedComplaint} 
+              onRateComplaint={handleRateComplaint}
+            />
 
             {/* In-app dispatch alerts */}
             <div id="notifications-anchor">

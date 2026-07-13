@@ -14,6 +14,9 @@ export interface MockComplaint {
   images: string[];
   assignedTo?: string;
   ward: string;
+  replies?: { id: string; text: string; time: string; author: string }[];
+  rating?: number;
+  feedback?: string;
 }
 
 export interface MaterialInventoryItem {
@@ -54,7 +57,306 @@ export interface DepartmentData {
   verificationTarget: string;
 }
 
+export interface DemoComplaint {
+  id: string;
+  issue: string;
+  category: 'Road' | 'Water' | 'Streetlight' | 'Garbage' | 'Drainage' | 'Others';
+  status: 'Pending' | 'In Progress' | 'Resolved' | 'Closed';
+  priority: 'Low' | 'Medium' | 'High' | 'Critical';
+  date: string;
+  ward: string;
+  district: string;
+  timeline: {
+    title: string;
+    description: string;
+    time: string;
+    done: boolean;
+  }[];
+  description?: string;
+  citizenName?: string;
+  contact?: string;
+  images?: string[];
+  assignedTo?: string;
+  replies?: { id: string; text: string; time: string; author: string }[];
+  rating?: number;
+  feedback?: string;
+}
+
+export function mapDemoToMock(demo: DemoComplaint): MockComplaint {
+  const deptMap: Record<string, string> = {
+    'Road': 'Roads Department',
+    'Water': 'Water Supply',
+    'Garbage': 'Solid Waste Management',
+    'Streetlight': 'Street Lighting',
+    'Drainage': 'Drainage & Storm Water',
+    'Others': 'Parks & Public Spaces'
+  };
+
+  const statusMap: Record<string, 'pending' | 'active' | 'resolved' | 'closed'> = {
+    'Pending': 'pending',
+    'In Progress': 'active',
+    'Resolved': 'resolved',
+    'Closed': 'closed'
+  };
+
+  const severityMap: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {
+    'Low': 'low',
+    'Medium': 'medium',
+    'High': 'high',
+    'Critical': 'critical'
+  };
+
+  return {
+    id: demo.id,
+    category: demo.category === 'Road' ? 'Potholes' : demo.category === 'Water' ? 'Pipe Leakage' : demo.category === 'Garbage' ? 'Garbage overflow' : demo.category === 'Streetlight' ? 'Streetlight failure' : demo.category === 'Drainage' ? 'Drainage blockages' : 'General',
+    title: demo.issue,
+    location: `${demo.ward}, ${demo.district}`,
+    slaDays: demo.priority === 'Critical' ? 1 : demo.priority === 'High' ? 2 : 3,
+    status: statusMap[demo.status] || 'pending',
+    severity: severityMap[demo.priority] || 'medium',
+    reportedAt: demo.date,
+    description: demo.description || demo.issue,
+    citizenName: demo.citizenName || 'Soniya Baskaran',
+    preferredLanguage: 'English',
+    contact: demo.contact || '+91 94421 82910',
+    images: demo.images || [],
+    assignedTo: demo.assignedTo,
+    ward: demo.ward.replace('Ward ', ''),
+    department: deptMap[demo.category] || 'Water Supply',
+    replies: demo.replies || [],
+    rating: (demo as any).rating,
+    feedback: (demo as any).feedback
+  } as any;
+}
+
+export function mapMockToDemo(mock: MockComplaint): DemoComplaint {
+  const catMap: Record<string, 'Road' | 'Water' | 'Streetlight' | 'Garbage' | 'Drainage' | 'Others'> = {
+    'Roads Department': 'Road',
+    'Water Supply': 'Water',
+    'Solid Waste Management': 'Garbage',
+    'Street Lighting': 'Streetlight',
+    'Drainage & Storm Water': 'Drainage',
+    'Parks & Public Spaces': 'Others'
+  };
+
+  const statusMap: Record<string, 'Pending' | 'In Progress' | 'Resolved' | 'Closed'> = {
+    'pending': 'Pending',
+    'active': 'In Progress',
+    'resolved': 'Resolved',
+    'closed': 'Closed'
+  };
+
+  const priorityMap: Record<string, 'Low' | 'Medium' | 'High' | 'Critical'> = {
+    'low': 'Low',
+    'medium': 'Medium',
+    'high': 'High',
+    'critical': 'Critical'
+  };
+
+  const wardString = mock.ward.startsWith('Ward') ? mock.ward : `Ward ${mock.ward}`;
+
+  let category: 'Road' | 'Water' | 'Streetlight' | 'Garbage' | 'Drainage' | 'Others' = 'Others';
+  if (mock.category === 'Potholes' || mock.category === 'Road Damage' || mock.category === 'Broken Pavements' || mock.category === 'Road Barricades') {
+    category = 'Road';
+  } else if (mock.category === 'Pipe Leakage' || mock.category === 'Water Shortage' || mock.category === 'Low Pressure' || mock.category === 'Contaminated Water') {
+    category = 'Water';
+  } else if (mock.category === 'Garbage overflow') {
+    category = 'Garbage';
+  } else if (mock.category === 'Streetlight failure') {
+    category = 'Streetlight';
+  } else if (mock.category === 'Drainage blockages') {
+    category = 'Drainage';
+  } else if ((mock as any).department) {
+    category = catMap[(mock as any).department] || 'Others';
+  }
+
+  const timeline = [
+    { title: 'Complaint Submitted', description: 'Grievance logged via secure citizen credentials.', time: mock.reportedAt, done: true },
+    { 
+      title: 'Authority Assigned', 
+      description: mock.assignedTo ? `Assigned to senior technician: ${mock.assignedTo}.` : 'Allocating maintenance engineer and service squad.', 
+      time: mock.assignedTo ? '1 hour ago' : 'In Progress', 
+      done: !!mock.assignedTo 
+    },
+    { 
+      title: 'Field Team Deployment Dispatch', 
+      description: mock.status === 'resolved' || mock.status === 'closed' ? 'Field work has been fully completed.' : mock.status === 'active' ? 'Operational dispatch crew actively working on coordinates.' : 'Pending allocation of crew.', 
+      time: mock.status === 'active' || mock.status === 'resolved' || mock.status === 'closed' ? 'Active' : 'Awaiting', 
+      done: mock.status === 'active' || mock.status === 'resolved' || mock.status === 'closed' 
+    },
+    { 
+      title: 'Grievance Resolution Closure', 
+      description: mock.status === 'resolved' || mock.status === 'closed' ? 'Work completed and closed with official photo verification.' : 'Awaiting final verification check.', 
+      time: mock.status === 'resolved' || mock.status === 'closed' ? 'Just Now' : 'Awaiting', 
+      done: mock.status === 'resolved' || mock.status === 'closed' 
+    }
+  ];
+
+  return {
+    id: mock.id,
+    issue: mock.title,
+    category,
+    status: statusMap[mock.status] || 'Pending',
+    priority: priorityMap[mock.severity] || 'Medium',
+    date: mock.reportedAt,
+    ward: wardString,
+    district: 'Madurai',
+    timeline: timeline,
+    description: mock.description,
+    citizenName: mock.citizenName,
+    contact: mock.contact,
+    images: mock.images,
+    assignedTo: mock.assignedTo,
+    replies: mock.replies || [],
+    rating: mock.rating,
+    feedback: mock.feedback
+  };
+}
+
+export function getStoredComplaints(): MockComplaint[] {
+  if (typeof window === 'undefined') return [];
+  const stored = localStorage.getItem('smartward_all_complaints');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const initial: MockComplaint[] = [];
+  
+  const citizenDemos: DemoComplaint[] = [
+    {
+      id: 'CMP582910',
+      issue: 'Major potholes on Ward 42 Main Avenue Road',
+      category: 'Road',
+      status: 'In Progress',
+      priority: 'High',
+      date: 'Jul 08, 2026',
+      ward: 'Ward 42',
+      district: 'Madurai',
+      timeline: []
+    },
+    {
+      id: 'CMP940212',
+      issue: 'Continuous freshwater pipeline leakage near Temple tank',
+      category: 'Water',
+      status: 'Pending',
+      priority: 'Critical',
+      date: 'Jul 10, 2026',
+      ward: 'Ward 42',
+      district: 'Madurai',
+      timeline: []
+    },
+    {
+      id: 'CMP472911',
+      issue: 'Streetlight column failure on 4th Cross Pedestrian Way',
+      category: 'Streetlight',
+      status: 'Resolved',
+      priority: 'Medium',
+      date: 'Jul 05, 2026',
+      ward: 'Ward 42',
+      district: 'Madurai',
+      timeline: []
+    },
+    {
+      id: 'CMP283914',
+      issue: 'Garbage dumpsters overflowing on North Bazaar Corner',
+      category: 'Garbage',
+      status: 'Closed',
+      priority: 'High',
+      date: 'Jul 01, 2026',
+      ward: 'Ward 42',
+      district: 'Madurai',
+      timeline: []
+    }
+  ];
+
+  citizenDemos.forEach(demo => {
+    initial.push(mapDemoToMock(demo));
+  });
+
+  const departments = [
+    'Roads Department',
+    'Water Supply',
+    'Sanitation',
+    'Electrical',
+    'Drainage & Storm Water',
+    'Solid Waste Management',
+    'Street Lighting',
+    'Parks & Public Spaces'
+  ];
+
+  departments.forEach(dept => {
+    const raw = getRawDepartmentData(dept);
+    if (raw && raw.complaints) {
+      raw.complaints.forEach(c => {
+        if (!initial.some(existing => existing.id === c.id)) {
+          initial.push({
+            ...c,
+            department: dept
+          } as any);
+        }
+      });
+    }
+  });
+
+  localStorage.setItem('smartward_all_complaints', JSON.stringify(initial));
+  return initial;
+}
+
+export function saveStoredComplaints(complaints: MockComplaint[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('smartward_all_complaints', JSON.stringify(complaints));
+}
+
+export function updateStoredComplaint(id: string, updatedFields: Partial<MockComplaint>) {
+  const all = getStoredComplaints();
+  const index = all.findIndex(c => c.id === id);
+  if (index !== -1) {
+    all[index] = { ...all[index], ...updatedFields };
+    saveStoredComplaints(all);
+  }
+}
+
+export function getCitizenComplaints(): DemoComplaint[] {
+  const all = getStoredComplaints();
+  return all.map(mapMockToDemo);
+}
+
 export function getDepartmentData(department: string): DepartmentData {
+  const baseData = getRawDepartmentData(department);
+  const allComplaints = getStoredComplaints();
+  
+  const filtered = allComplaints.filter((c: any) => {
+    return c.department === department || getDepartmentForCategory(c.category) === department;
+  });
+
+  return {
+    ...baseData,
+    complaints: filtered
+  };
+}
+
+function getDepartmentForCategory(category: string): string {
+  const catToDept: Record<string, string> = {
+    'Potholes': 'Roads Department',
+    'Road Damage': 'Roads Department',
+    'Broken Pavements': 'Roads Department',
+    'Road Barricades': 'Roads Department',
+    'Pipe Leakage': 'Water Supply',
+    'Water Shortage': 'Water Supply',
+    'Low Pressure': 'Water Supply',
+    'Contaminated Water': 'Water Supply',
+    'Garbage overflow': 'Solid Waste Management',
+    'Streetlight failure': 'Street Lighting',
+    'Drainage blockages': 'Drainage & Storm Water'
+  };
+  return catToDept[category] || '';
+}
+
+function getRawDepartmentData(department: string): DepartmentData {
   switch (department) {
     case 'Roads Department':
       return {

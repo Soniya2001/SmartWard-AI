@@ -60,35 +60,69 @@ Identify and describe the issue visually presented in the photo.
 
 Describe the damage, hazard, or safety risk objectively and neutrally, incorporating specifics visible in the photo. Recommend matching categories and severity level.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [imagePart, prompt],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: {
-                type: Type.STRING,
-                description: "A short, concise, professional title for the issue (max 5-8 words). Example: 'Water-logged pothole near street market entrance'"
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [imagePart, prompt],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                title: {
+                  type: Type.STRING,
+                  description: "A short, concise, professional title for the issue (max 5-8 words). Example: 'Water-logged pothole near street market entrance'"
+                },
+                description: {
+                  type: Type.STRING,
+                  description: "A highly detailed, plain text description describing the hazard, potential risks, and visible features in a helpful administrative tone. DO NOT put JSON in this field."
+                },
+                suggestedCategory: {
+                  type: Type.STRING,
+                  description: "Recommend from: 'Road damage / potholes', 'Water supply / Leakage', 'Solid Waste / Garbage', 'Sewage / Drainage overflow', 'Streetlight / Electrical', 'Public health & Safety', or 'Others'."
+                },
+                severityIndex: {
+                  type: Type.STRING,
+                  description: "Recommend from: 'Low (General queue)', 'Medium (Normal SLA queue)', or 'High (Urgent Dispatch)'."
+                }
               },
-              description: {
-                type: Type.STRING,
-                description: "A highly detailed, plain text description describing the hazard, potential risks, and visible features in a helpful administrative tone. DO NOT put JSON in this field."
-              },
-              suggestedCategory: {
-                type: Type.STRING,
-                description: "Recommend from: 'Road damage / potholes', 'Water supply / Leakage', 'Solid Waste / Garbage', 'Sewage / Drainage overflow', 'Streetlight / Electrical', 'Public health & Safety', or 'Others'."
-              },
-              severityIndex: {
-                type: Type.STRING,
-                description: "Recommend from: 'Low (General queue)', 'Medium (Normal SLA queue)', or 'High (Urgent Dispatch)'."
-              }
-            },
-            required: ["title", "description", "suggestedCategory", "severityIndex"]
+              required: ["title", "description", "suggestedCategory", "severityIndex"]
+            }
           }
-        }
-      });
+        });
+      } catch (firstErr: any) {
+        console.warn("Primary gemini-2.5-flash model failed or unavailable. Trying stable fallback model gemini-1.5-flash...", firstErr.message || firstErr);
+        response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: [imagePart, prompt],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                title: {
+                  type: Type.STRING,
+                  description: "A short, concise, professional title for the issue (max 5-8 words). Example: 'Water-logged pothole near street market entrance'"
+                },
+                description: {
+                  type: Type.STRING,
+                  description: "A highly detailed, plain text description describing the hazard, potential risks, and visible features in a helpful administrative tone. DO NOT put JSON in this field."
+                },
+                suggestedCategory: {
+                  type: Type.STRING,
+                  description: "Recommend from: 'Road damage / potholes', 'Water supply / Leakage', 'Solid Waste / Garbage', 'Sewage / Drainage overflow', 'Streetlight / Electrical', 'Public health & Safety', or 'Others'."
+                },
+                severityIndex: {
+                  type: Type.STRING,
+                  description: "Recommend from: 'Low (General queue)', 'Medium (Normal SLA queue)', or 'High (Urgent Dispatch)'."
+                }
+              },
+              required: ["title", "description", "suggestedCategory", "severityIndex"]
+            }
+          }
+        });
+      }
 
       const responseText = response.text || "";
       let parsedResult;
@@ -96,18 +130,13 @@ Describe the damage, hazard, or safety risk objectively and neutrally, incorpora
         parsedResult = JSON.parse(responseText.trim());
       } catch (parseError) {
         console.error("JSON parsing error on Gemini response:", parseError, responseText);
-        parsedResult = {
-          title: "Civic Issue Analysis",
-          description: "Visual analysis shows structural damage or civic issues in the submitted photo.",
-          suggestedCategory: category || "Others",
-          severityIndex: "Medium (Normal SLA queue)"
-        };
+        throw new Error("Unable to parse the AI analysis response into a valid JSON schema.");
       }
 
       res.json(parsedResult);
     } catch (error: any) {
-      console.error("Error in describe-issue API:", error);
-      res.status(500).json({ error: error.message || "Failed to analyze image with AI" });
+      console.error("All Gemini API models failed or are offline:", error);
+      res.status(500).json({ error: error.message || "Failed to analyze photo with Gemini AI. Please check your network and API key." });
     }
   });
 
@@ -132,15 +161,24 @@ Return ONLY the direct translation. Do not wrap in quotes or add metadata. Do no
 Text to translate:
 "${text}"`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-      });
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: prompt,
+        });
+      } catch (err: any) {
+        console.warn("Primary translation model failed. Trying stable fallback gemini-1.5-flash...", err.message || err);
+        response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: prompt,
+        });
+      }
 
       res.json({ translatedText: response.text?.trim() || text });
     } catch (error: any) {
-      console.error("Translation API error:", error);
-      res.status(500).json({ error: error.message || "Failed to translate text" });
+      console.warn("Translation API model is temporarily experiencing high demand. Falling back to original text:", error.message || error);
+      res.json({ translatedText: req.body.text || "" });
     }
   });
 
