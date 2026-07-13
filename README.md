@@ -109,7 +109,7 @@ Select if your project participates in any track:
 
 ## 📽️ Demo & Deliverables
 
-- **Demo Video Link (Mandatory):** [TBD]  
+- **Demo Video Link (Mandatory): https://drive.google.com/file/d/165GLEjhx0g1XZVwahjyk-c5NPtRemxt4/view?usp=drive_link
 - **Deployment Link (Recommended): https://smartward-ai.ai.studio
 - **Pitch Deck / PPT (Optional): https://docs.google.com/presentation/d/1C5ZiYsKykxzzsi1URnNVvYwSWII7huz_/edit?usp=sharing&ouid=118359157138178570616&rtpof=true&sd=true
 
