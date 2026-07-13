@@ -35,6 +35,7 @@ The **SmartWard Civic Redressal Platform** is a high-performance, single-page fu
 - **Framework & Build System**: React 18+ powered by Vite for rapid HMR-less building and deployment.
 - **Routing**: Client-side reactive routing with dynamic layout shells (Public vs. Authority).
 - **Styling**: Tailwind CSS utility classes, custom spacing scales, fluid layouts, and responsive design systems.
+- **Generative AI Engine**: Powered by **Google Gen AI SDK** using **Gemini 2.5 Flash** (`gemini-2.5-flash`) for multi-modal visual analysis, automatic ticket drafts, issue classification, and real-time translation, with intelligent fallback handling to **Gemini 1.5 Flash** (`gemini-1.5-flash`).
 - **Data Visualization**: Recharts engine for rendering complex multi-dataset bar charts, pie charts, and trendlines.
 - **Animations**: Framer Motion (`motion/react`) for fluid layout transitions, dialog fade-ins, and state changes.
 - **State & Context**: Built on a modular `AuthorityContext` provider that simulates real-time centralized data flows, syncs mock database tables, and tracks the active administrative roles.
